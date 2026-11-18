@@ -1,0 +1,990 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>LabUkur 3D – Simulasi Alat Ukur Listrik</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{--bg:#e8eef0;--fg:#13232b;--mut:#51646d;--card:#fff;--ac:#0b7a86;--bd:#c5d3d8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0e1719;--fg:#e6f0f2;--mut:#93a8af;--card:#162326;--bd:#27393e;--ac:#37c2cf}}
+:root[data-theme=dark]{--bg:#0e1719;--fg:#e6f0f2;--mut:#93a8af;--card:#162326;--bd:#27393e;--ac:#37c2cf}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:clamp(30px,8vw,44px);line-height:1.05;margin:18px 0 10px;letter-spacing:-.02em}
+.lead{color:var(--mut);max-width:42ch;margin:0 0 24px}.cards{display:grid;gap:12px}
+.card{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:center;text-align:left;background:var(--card);border:1.5px solid var(--bd);border-radius:14px;padding:12px;color:inherit;font:inherit;cursor:pointer}
+.card:hover,.card:focus-visible{border-color:var(--ac);outline:none}.card h2{margin:0 0 2px;font-size:18px}.card p{margin:0;color:var(--mut);font-size:14px}.card svg{width:88px;height:66px}
+.foot{color:var(--mut);font-size:13px;margin-top:22px}
+button.s{font:inherit;font-size:14px;background:var(--card);color:var(--fg);border:1.5px solid var(--bd);border-radius:10px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+button.s:focus-visible{outline:2px solid var(--ac)}button.s.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+#simv{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#stage{flex:1;position:relative;min-height:0}#c{width:100%;height:100%;display:block;touch-action:none}
+.tb{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.tb b{font-size:15px;margin-right:auto;text-shadow:0 0 6px var(--bg)}
+#selc{position:absolute;left:8px;bottom:8px;display:flex;gap:8px;align-items:center;background:var(--card);border:1.5px solid var(--bd);border-radius:10px;padding:4px 6px 4px 12px;font-size:14px}
+.dock{background:var(--card);border-top:1.5px solid var(--bd);padding:8px 14px 10px;max-height:44vh;overflow:auto}
+#pal{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}#pal:empty{display:none}
+#msg{margin:2px 0 4px;font-weight:600;font-size:15px;min-height:2.9em}
+summary{cursor:pointer;color:var(--mut);font-size:14px}.dock ol{margin:6px 0;padding-left:20px;font-size:14px;color:var(--mut)}
+#val{font-family:"IBM Plex Mono",monospace;color:var(--ac);margin:6px 0}#ex{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+
+/* ---------- Megger (insulation tester) ---------- */
+#mgv{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.mgtb{display:flex;gap:8px;align-items:center;padding:8px}.mgtb b{font-size:15px;margin-right:auto}
+.mgst{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px 8px}
+#mg-my10{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+#mg-needle{transform-origin:180px 210px;transition:transform .7s cubic-bezier(.25,1.6,.45,1)}#mg-needle.drag{transition:none}
+#mg-face{cursor:grab}#mg-face.drag{cursor:grabbing}
+#mgv .sc{font:700 10.5px Arial,Helvetica,sans-serif;fill:#1d1d1b}#mgv .sv{font:700 8.5px Arial,Helvetica,sans-serif;fill:#1d1d1b}#mgv .tiny{font:600 5.6px Arial,Helvetica,sans-serif;fill:#2a2a28}
+#mg-btn{cursor:pointer;outline:none}#mg-btn.down .cap{transform:translateY(1.5px) scale(.96);transform-origin:128px 190px}#mg-btn:focus-visible .ring{stroke:var(--ac);stroke-width:3}
+#mgv .clip{cursor:grab;outline:none}#mgv .clip.drag,#mgv .hit.drag{cursor:grabbing}#mgv .clip:focus-visible .boot{stroke:var(--ac);stroke-width:2.5}
+#mgv .hit{cursor:grab;fill:none;stroke:transparent;stroke-width:26;stroke-linecap:round}
+#mgv .jawU,#mgv .jawL{transition:transform .16s ease-out}#mgv .open .jawU{transform:rotate(-16deg)}#mgv .open .jawL{transform:rotate(16deg)}
+.mgrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}.mgread{font:500 18px "IBM Plex Mono",monospace;color:var(--ac);min-width:9.5em}
+.mgrow input[type=range]{flex:1;min-width:140px;max-width:260px;accent-color:var(--ac)}
+@media(prefers-reduced-motion:reduce){#mg-needle,#mgv .jawU,#mgv .jawL{transition:none}}
+
+#lx-svg{width:100%;height:auto;display:block;filter:drop-shadow(0 6px 6px rgba(0,0,0,.3));user-select:none;-webkit-user-select:none}
+#lx-svg .lxb{cursor:pointer;outline:none}#lx-svg .lxb:focus-visible rect{stroke:#37c2cf;stroke-width:3}#lx-svg .lxb.dn{transform:translateY(1.5px)}
+#lx-svg .bt{font:700 11px Arial,Helvetica,sans-serif;fill:#fff;text-anchor:middle;pointer-events:none}
+#lx-svg .sg,#lx-svg .dp{fill:#151a15;opacity:.06;transition:opacity .08s}#lx-svg .sg.on,#lx-svg .dp.on{opacity:1}
+#lx-svg .lxi{fill:#151a15;font-family:Arial,Helvetica,sans-serif;font-weight:700}
+#lx-bg{fill:url(#lx-lcd)}#lx-svg.bl #lx-bg{fill:url(#lx-lcdbl)}
+
+/* ---------- Luxmeter UT383 BT ---------- */
+#lxv{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.lxbody{flex:1;overflow:auto;padding:0 12px 28px}.lxgrid{display:grid;gap:16px;max-width:900px;margin:0 auto}
+@media(min-width:820px){.lxgrid{grid-template-columns:1fr 320px;align-items:start}}
+.lxcard{background:var(--card);border:1.5px solid var(--bd);border-radius:14px;padding:10px}
+#lx-sc{width:100%;height:auto;display:block;border-radius:10px;touch-action:none;cursor:ew-resize}#lx-sens{outline:none}#lx-sens:focus-visible rect:first-child{stroke:#37c2cf;stroke-width:2}
+.lxsel{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.lxsel select{width:100%;min-width:0;font:inherit;font-size:13px;padding:6px 2px;border-radius:8px;border:1.5px solid var(--bd);background:var(--card);color:var(--fg)}
+.lxrow{display:flex;align-items:center;gap:8px;font-size:14px;margin:6px 0}.lxrow span{min-width:9.5em}.lxrow input{flex:1;min-width:0;accent-color:var(--ac)}.lxrow output{font-family:"IBM Plex Mono",monospace;min-width:4.5em;text-align:right}
+.lxpre{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.lxmini{margin:6px 0;font-size:15px}.lxmini b{font-family:"IBM Plex Mono",monospace;color:var(--ac)}
+.lxr{width:min(300px,100%);margin:0 auto}.lxleg{font-size:13px;color:var(--mut);padding-left:18px;margin:12px 0 0}#lxth{font-size:14px;color:var(--mut)}
+
+
+/* ---------- Logo TRE + tampilan HP (9:16) / Laptop ---------- */
+html,body{height:100%}body{overflow:hidden}
+#app{--H:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));position:relative;height:var(--H);width:100%;overflow:hidden;background:var(--bg);transform:translateZ(0)}
+#app section{padding-top:0!important;padding-bottom:0!important}
+#home{height:100%;overflow:auto;max-width:none;margin:0;padding:14px 14px 36px}
+.brand{display:flex;flex-direction:column;gap:10px}.logo{background:#fff;border:1.5px solid var(--bd);border-radius:14px;padding:10px 14px}.logo img{display:block;width:100%;height:auto}
+.vsw{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--mut)}
+html[data-view=hp] #app{width:min(100vw,calc(var(--H)*9/16));margin:0 auto}
+html[data-view=hp] #home>*{max-width:100%}html[data-view=hp] h1{font-size:28px}html[data-view=hp] .lxgrid{grid-template-columns:1fr!important}
+@media(min-width:600px){html[data-view=hp] body{background:#0b1214}html[data-view=hp] #app{--H:calc(100dvh - 40px);margin:20px auto;border-radius:28px;box-shadow:0 0 0 9px #1b1f22,0 18px 50px rgba(0,0,0,.45)}}
+html[data-view=lp] #home{padding:24px 40px 56px}html[data-view=lp] #home>*{max-width:1180px;margin-left:auto;margin-right:auto}
+html[data-view=lp] .brand{flex-direction:row;align-items:center;justify-content:space-between}html[data-view=lp] .logo{width:min(620px,100%)}
+html[data-view=lp] h1{font-size:48px}html[data-view=lp] .lead{max-width:62ch;font-size:18px}
+html[data-view=lp] .cards{grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+html[data-view=lp] .card{grid-template-columns:110px 1fr;padding:16px}html[data-view=lp] .card svg{width:110px;height:82px}html[data-view=lp] .card h2{font-size:20px}
+html[data-view=lp] .lxgrid{max-width:1100px;grid-template-columns:1fr 360px}html[data-view=lp] .lxr{width:min(340px,100%)}
+</style><script>(function(){var s=null;try{s=localStorage.getItem('lab-view')}catch(e){}document.documentElement.dataset.view=s=='hp'||s=='lp'?s:(innerWidth<=820||(matchMedia('(pointer:coarse)').matches&&innerWidth<=1100)?'hp':'lp')})()</script></head><body><div id="app">
+<main id="home"><header class="brand"><div class="logo"><img src="data:image/jpeg;base64,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W6/NLP8AeJ+9u278bFb/AFSz/eK9iIjZRP8Ae3bd+Nit/qln+8T97dt342K3+qWf7xXsRDZRim+pwWiOugkqeU66aBsjXSRi1saXtB8gHv8AGx42rwUVJBQW6noaVgZBTxtijaPwWtAAH6gvuiJFpvJuVtxHj6sro3gVkw+T0o9/e4ev6BsrcSdKo/UPnouWYOtVHN3QW8GCMA+HSn7936PDf0Lp5+R3FmavHwWDhjSZ1PPotbe7HOfSP5Qvf7i+vuApYi6RrXeT6l7z/erS8A8Ntxu3xZfkdMPrtOzupoZB/wCrMPvP+kf7FqfT7wx8slgzrKaXcDT30NLKPvz/AM44fD4K04GvGlrdMwOff3I9Fy414opimdLwZ92PzzHj5R9/oALlEW+eWiIiAiIgIiIMNl38AL5+b6j/AAnKu/QF/E7pvzvWf3tViMu/gBfPzfUf4TlXfoC/id0353rP72oLQoiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIfIREEa1XCeMXLnOm5SvN1v90uVC8yW631daXUNA8sDC+KEDQcQN+SfJ2pKA0ERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBETaDUeScuhwvjyvvBka2o7PZUwcfWR3of0eT+hVo4c4uquR8rdl2RxyCyQS7Y2T1qXg71+TfklSbndkreYeWIsYp53xY5ZHbr52ekkh8lgP8r0H6ypqtdroLNaKe2WymZTUlOwRxxMGg0Bayqx7Ve7Vf5KennK52dSjRNO7mxP+Iu86p/pp8I9Zjn5bu1DFHBAyGGNscbAGtY0aDQPQAL6LgLlbNTN9+oiIgIiICIiAiIgw2XfwAvn5vqP8Jyrv0BfxO6b871n97VYjLv4AXz831H+E5V36Av4ndN+d6z+9qC0KIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAvnKxz4nsa8sLgQHj1b49V9EQYnH8ft+N2RlutzCGdxkkkf5fK8nbnuPvJKyw9ERREREbQyrrquVTXXO8yIiKWIiIgIiICIiAiIgx9+opbli9yt1OWCWppZYWF50A5zC0b+jZUT9LvFOScNcBQ4VlVRb57gyvqKkvoJHSR9ryNeXNad+PgpoRAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERB//9k=" alt="Logo Program Studi Teknologi Rekayasa Elektro, Sekolah Vokasi Universitas Gadjah Mada"></div><div class="vsw" role="group" aria-label="Pilih tampilan"><span>Tampilan:</span><button class="s" data-vw="hp">📱 HP (9:16)</button><button class="s" data-vw="lp">💻 Laptop</button></div></header>
+<h1>Simulasi 3D alat ukur listrik</h1>
+<p class="lead">Putar kamera, putar selektor, tarik probe ke kaki komponen, lalu baca jarum atau layar seperti di meja praktikum.</p>
+<div class="cards">
+<button class="card" data-m="mm"><svg viewBox="0 0 80 60"><rect x="4" y="2" width="72" height="56" rx="8" fill="#c8402a"/><rect x="8" y="6" width="64" height="48" rx="6" fill="#2a2d34"/><rect x="12" y="9" width="56" height="26" rx="4" fill="#f2ecd0"/><path d="M22 30A20 20 0 0 1 58 30" stroke="#555" stroke-width="1.5" fill="none"/><path d="M40 32L50 15" stroke="#c8402a" stroke-width="2"/><circle cx="40" cy="45" r="8" fill="#111" stroke="#aaa" stroke-width="2"/></svg><div><h2>Multimeter analog</h2><p>Volt DC, volt AC, dan ohm dengan kalibrasi nol.</p></div></button>
+<button class="card" data-m="lcr"><svg viewBox="0 0 80 60"><rect x="4" y="2" width="72" height="56" rx="8" fill="#3b4350"/><rect x="10" y="7" width="60" height="26" rx="4" fill="#b8cf9a"/><text x="40" y="26" text-anchor="middle" font-size="13" font-family="monospace" fill="#1d2b14">4.700k</text><circle cx="40" cy="46" r="8" fill="#111" stroke="#aaa" stroke-width="2"/></svg><div><h2>LCR meter</h2><p>Ukur resistor, kapasitor, dan induktor pada tiga frekuensi.</p></div></button>
+<button class="card" data-m="cl"><svg viewBox="0 0 80 60"><rect x="22" y="22" width="36" height="36" rx="6" fill="#f2b705"/><circle cx="40" cy="20" r="14" fill="none" stroke="#2b2b2b" stroke-width="7" stroke-dasharray="70 18"/><rect x="29" y="30" width="22" height="10" rx="2" fill="#a8bb92"/></svg><div><h2>Tang ampere</h2><p>Jepit kabel fasa atau netral untuk membaca arus beban.</p></div></button>
+<button class="card" data-m="gv"><svg viewBox="0 0 80 60"><rect x="4" y="2" width="72" height="56" rx="8" fill="#1c1d22"/><rect x="9" y="6" width="62" height="28" rx="3" fill="#f2f2ee"/><path d="M20 28A24 24 0 0 1 60 28" stroke="#111" stroke-width="2.5" fill="none"/><path d="M40 36L47 12" stroke="#111" stroke-width="1.5"/><rect x="9" y="35" width="62" height="7" fill="#e4e4e0"/><rect x="12" y="45" width="56" height="10" rx="1.5" fill="#1c40ad"/><circle cx="22" cy="50" r="2.8" fill="#111" stroke="#fff" stroke-width=".6"/><circle cx="40" cy="50" r="2.8" fill="#d22"/><circle cx="58" cy="50" r="2.8" fill="#d22"/></svg><div><h2>Galvanometer</h2><p>Arus kecil dari sel dan baterai, dengan terminal G0, G1, dan knob nol.</p></div></button>
+<button class="card" data-m="dm"><svg viewBox="0 0 80 60"><rect x="22" y="2" width="36" height="56" rx="6" fill="#f39a1e"/><rect x="26" y="6" width="28" height="14" rx="2" fill="#37373a"/><rect x="28" y="8" width="24" height="10" rx="1" fill="#cfd3cf"/><text x="50" y="16" text-anchor="end" font-size="9" font-family="monospace" font-weight="700" fill="#1b1c1b">9.00</text><rect x="26" y="22" width="28" height="32" rx="3" fill="#2f2f31"/><circle cx="40" cy="35" r="9" fill="#1f1e1e" stroke="#555"/><path d="M40 27V35" stroke="#f3d21c" stroke-width="2"/><circle cx="32" cy="49" r="2.5" fill="#c71f1f"/><circle cx="40" cy="49" r="2.5" fill="#c71f1f"/><circle cx="48" cy="49" r="2.5" fill="#222"/></svg><div><h2>Multimeter digital</h2><p>Volt, ohm, kapasitansi, arus, dan suhu dengan layar tujuh segmen.</p></div></button>
+<button class="card" data-m="pm"><svg viewBox="0 0 80 60"><rect x="4" y="6" width="72" height="48" rx="6" fill="#1d2126"/><rect x="9" y="11" width="62" height="26" rx="3" fill="#4aa9ec"/><text x="14" y="25" font-size="12" font-family="monospace" font-weight="700" fill="#06233f">220.4</text><text x="14" y="34" font-size="7" font-family="monospace" fill="#06233f">0.95 PF</text><path d="M10 46q5-8 10 0t10 0t10 0t10 0" stroke="#4fc3ff" stroke-width="1.6" fill="none"/><path d="M13 46q5-6 10 0t10 0t10 0t10 0" stroke="#ffb300" stroke-width="1.6" fill="none"/></svg><div><h2>Power meter AC</h2><p>Ukur V, A, W, PF, kWh, dan Hz pada lampu, kipas, setrika, dan alat rumah lain.</p></div></button>
+<button class="card" data-m="mg"><svg viewBox="0 0 80 60"><rect x="4" y="4" width="72" height="52" rx="6" fill="#3a3c3f"/><rect x="12" y="8" width="56" height="28" rx="3" fill="#f1ecd6"/><path d="M18 31 Q40 4 62 31" stroke="#1d1d1b" stroke-width="1.5" fill="none"/><text x="40" y="31" text-anchor="middle" font-size="9" font-family="Georgia,serif" font-weight="700" fill="#1d1d1b">MΩ</text><path d="M40 46 L25 13" stroke="#d3281e" stroke-width="1.4"/><rect x="10" y="41" width="22" height="12" rx="2" fill="#f2b61c"/><circle cx="46" cy="46" r="5" fill="#222325" stroke="#e0a210" stroke-width="1.5"/><circle cx="5" cy="19" r="2.4" fill="#111"/><circle cx="5" cy="30" r="2.4" fill="#c71f1f"/></svg><div><h2>Megger (insulation tester)</h2><p>Ukur tahanan isolasi dalam MΩ dengan kabel LINE dan EARTH, serta cek baterai.</p></div></button>
+<button class="card" data-m="lx"><svg viewBox="0 0 80 60"><circle cx="40" cy="14" r="12" fill="#1b1b1d"/><circle cx="40" cy="14" r="8" fill="#f4f4ef"/><rect x="37" y="25" width="6" height="5" fill="#aab3b9"/><rect x="26" y="28" width="28" height="30" rx="8" fill="#d31b14"/><rect x="30" y="33" width="20" height="10" rx="1.5" fill="#c9d3c4"/><text x="48" y="41" text-anchor="end" font-size="8" font-family="monospace" font-weight="700" fill="#151a15">189</text><rect x="30" y="47" width="9" height="4" rx="2" fill="#2a2d32"/><rect x="41" y="47" width="9" height="4" rx="2" fill="#2a2d32"/></svg><div><h2>Luxmeter (UT383 BT)</h2><p>Ukur intensitas cahaya (lux / fc) dari kombinasi lampu LED, CFL, dan pijar.</p></div></button>
+</div><p class="foot">Seret ruang kosong untuk memutar kamera, cubit atau gulir untuk zoom. Ketuk selektor untuk berpindah posisi, atau seret ke kiri dan kanan.</p></main>
+<section id="simv" hidden><div id="stage"><canvas id="c"></canvas>
+<div class="tb"><button class="s" id="back">← Kembali</button><b id="ttl"></b><button class="s" data-v="3">3D</button><button class="s" data-v="t">Atas</button><button class="s" data-v="f">Depan</button><button class="s" id="wb">Kabel</button><button class="s" id="rst">Reset</button></div>
+<div id="selc" hidden><span id="seln"></span><button class="s" id="del">Hapus</button></div></div>
+<div class="dock"><div id="pal"></div><p id="msg"></p><details><summary>Petunjuk dan nilai</summary><ol id="steps"></ol><label><input type="checkbox" id="cb"> Tampilkan nilai sebenarnya</label><p id="val" hidden></p><div id="ex"></div></details></div></section>
+<section id="mgv" hidden><div class="mgtb"><button class="s" id="mgBack">← Kembali</button><b>Megger (insulation tester)</b><button class="s" id="mgReset">Reset</button></div>
+<div class="mgst"><svg id="mg-my10" viewBox="-240 0 600 560" role="group" aria-label="Insulation tester analog MY10 dengan kabel LINE (merah) dan EARTH (hitam) di sisi kiri">
+  <defs>
+    <linearGradient id="mg-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4b4d50"/><stop offset=".5" stop-color="#37393c"/><stop offset="1" stop-color="#27282a"/></linearGradient>
+    <linearGradient id="mg-faceGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7f4e6"/><stop offset="1" stop-color="#e6e1cb"/></linearGradient>
+    <linearGradient id="mg-yel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc928"/><stop offset="1" stop-color="#e0a210"/></linearGradient>
+    <clipPath id="mg-wclip"><rect x="60" y="38" width="240" height="128" rx="5"/></clipPath>
+    <linearGradient id="mg-metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7f9fb"/><stop offset=".35" stop-color="#b3b9bf"/><stop offset=".6" stop-color="#e4e7ea"/><stop offset="1" stop-color="#868d94"/></linearGradient>
+    <linearGradient id="mg-bootRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7468"/><stop offset=".45" stop-color="#e0261d"/><stop offset="1" stop-color="#9c130d"/></linearGradient>
+    <linearGradient id="mg-bootBlack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#606066"/><stop offset=".45" stop-color="#2a2a2f"/><stop offset="1" stop-color="#09090a"/></linearGradient>
+    <filter id="mg-lsh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="2" dy="5" stdDeviation="3.5" flood-color="#000" flood-opacity=".28"/></filter>
+    <filter id="mg-sh" x="-5%" y="-5%" width="110%" height="115%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity=".35"/></filter>
+  </defs>
+
+  <!-- Bodi -->
+  <rect x="165" y="12" width="50" height="16" rx="4" fill="#2b2c2e"/>
+  <rect x="0" y="58" width="26" height="108" rx="5" fill="#2b2c2e" stroke="#1b1c1d" stroke-width="1.5"/>
+  <g font-family="Arial,sans-serif" font-size="6" font-weight="800" fill="#f2f2ef" text-anchor="middle"><text x="13" y="72">EARTH</text><text x="13" y="124">LINE</text></g>
+  <g><circle cx="13" cy="84" r="8.5" fill="#0b0b0c"/><circle cx="13" cy="84" r="6" fill="url(#mg-metal)" stroke="#555a60" stroke-width=".8"/><circle cx="13" cy="84" r="2.4" fill="#1b1c1d"/></g>
+  <g><circle cx="13" cy="136" r="8.5" fill="#c71f1f"/><circle cx="13" cy="136" r="6" fill="url(#mg-metal)" stroke="#555a60" stroke-width=".8"/><circle cx="13" cy="136" r="2.4" fill="#1b1c1d"/></g><rect x="334" y="68" width="12" height="44" rx="3" fill="#2b2c2e"/>
+  <rect x="170" y="268" width="22" height="16" rx="3" fill="#2b2c2e"/>
+  <rect x="24" y="24" width="312" height="246" rx="14" fill="url(#mg-body)" stroke="#1b1c1d" stroke-width="2" filter="url(#mg-sh)"/>
+  <rect x="28" y="28" width="304" height="238" rx="11" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="2"/>
+
+  <!-- Jendela meter -->
+  <rect x="56" y="34" width="248" height="136" rx="7" fill="#1f2022"/>
+  <rect x="60" y="38" width="240" height="128" rx="5" fill="url(#mg-faceGrad)"/>
+  <g clip-path="url(#mg-wclip)">
+    <g id="mg-scales"></g>
+    <text x="180" y="143" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="25" font-weight="700" fill="#1d1d1b">MΩ</text>
+    <text x="68" y="52" class="tiny">500V/1000MΩ</text>
+    <text x="292" y="52" class="tiny" text-anchor="end">ACCURACY ±1.5%</text>
+    <text x="68" y="161" class="tiny">INSULATION RESISTANCE</text>
+    <!-- Jarum -->
+    <g id="mg-needle" style="transform:rotate(-44deg)">
+      <path d="M178.6,214 L180,64 L181.4,214 Z" fill="#000" opacity=".25" transform="translate(2 3)"/>
+      <path d="M178.4,222 L180,64 L181.6,222 Z" fill="#d3281e"/>
+    </g>
+    <!-- Kilap kaca -->
+    <path d="M60,38 H300 V70 Q180,50 60,92 Z" fill="#fff" opacity=".12" pointer-events="none"/>
+    <rect id="mg-face" x="60" y="38" width="240" height="128" fill="transparent"/>
+  </g>
+
+  <!-- Label depan -->
+  <text x="38" y="195" font-family="Arial,sans-serif" font-size="15" font-weight="800" font-style="italic" fill="#f2f2ef">MY10</text>
+  <text x="38" y="205" font-family="Arial,sans-serif" font-size="5.5" font-weight="700" letter-spacing=".4" fill="#f2f2ef">INSULATION TESTER</text>
+
+  <!-- Tombol BATT CHECK -->
+  <g id="mg-btn" tabindex="0" role="button" aria-label="BATT CHECK (tahan untuk cek baterai)">
+    <circle class="ring" cx="128" cy="190" r="15" fill="#e0a210" stroke="#caa016" stroke-width="2"/>
+    <g class="cap"><circle cx="128" cy="190" r="12" fill="#222325" stroke="#0e0e0f" stroke-width="1"/>
+    <text x="128" y="189" text-anchor="middle" font-family="Arial,sans-serif" font-size="5.6" font-weight="800" fill="#f4d34a">BATT</text>
+    <text x="128" y="196" text-anchor="middle" font-family="Arial,sans-serif" font-size="5.6" font-weight="800" fill="#f4d34a">CHECK</text></g>
+  </g>
+
+  <!-- ALARM -->
+  <text x="304" y="189" text-anchor="end" font-family="Arial,sans-serif" font-size="7" font-weight="800" letter-spacing=".5" fill="#f2f2ef">ALARM</text>
+  <ellipse cx="298" cy="197" rx="7" ry="2.8" fill="#6a6c6f" stroke="#1b1c1d" stroke-width=".8"/>
+
+  <!-- Penutup kuning -->
+  <rect x="34" y="212" width="80" height="38" rx="4" fill="url(#mg-yel)" stroke="#a97806" stroke-width="1.5"/>
+  <g stroke="#a97806" stroke-opacity=".55" stroke-width="1.2"><path d="M44,218 V244 M52,218 V244 M60,218 V244 M68,218 V244 M76,218 V244 M84,218 V244 M92,218 V244 M100,218 V244"/></g>
+  <path d="M34,216 Q34,212 38,212 H110" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.5"/>
+
+  <!-- Peringatan, sekrup, merek -->
+  <path d="M124,244 L132,229 L140,244 Z" fill="none" stroke="#f3c823" stroke-width="2" stroke-linejoin="round"/>
+  <text x="132" y="242" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="800" fill="#f3c823">!</text>
+  <circle cx="180" cy="222" r="6" fill="#1f2022" stroke="#5a5c5f" stroke-width="1.2"/><path d="M177,222 h6" stroke="#5a5c5f" stroke-width="1.2"/>
+  <text x="40" y="264" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" fill="#f2f2ef" letter-spacing=".6">YOKOGAWA</text>
+  <path d="M95,260 l3.5,4 l-3.5,4 l-3.5,-4 Z" fill="#f2f2ef"/>
+<g id="mg-bench"></g></svg></div>
+<div class="dock"><div class="mgrow"><span class="mgread" id="mg-read" aria-live="polite">∞ MΩ</span><label>Posisi jarum <input id="mg-slide" type="range" min="0" max="1000" value="0" aria-label="Posisi jarum"></label></div>
+<div class="mgrow" role="group" aria-label="Sampel yang diukur"><span>Sampel:</span><button class="s on" data-sm="iron">Setrika</button><button class="s" data-sm="cooker">Rice cooker</button><button class="s" data-sm="motor">Motor induksi 1 fasa</button></div>
+<div class="mgrow" role="group" aria-label="Kondisi sampel"><span>Kondisi:</span><button class="s on" data-cd="baik">Baik</button><button class="s" data-cd="lembap">Lembap</button><button class="s" data-cd="bocor">Bocor</button><button class="s" data-cd="acak">Acak (tebak)</button></div>
+<p id="mg-info" style="margin:2px 0 6px;font-weight:600;font-size:15px;min-height:2.9em"></p>
+<details><summary>Petunjuk</summary><ol><li>Seret klip kabel LINE (merah) atau EARTH (hitam) untuk memindahkannya. Klik klip untuk membuka atau menutup rahangnya.</li><li>Pertemukan kedua klip: rangkaian terhubung singkat dan jarum menunjuk 0 MΩ. Lepaskan klip: jarum kembali ke ∞.</li><li>Tahan tombol BATT CHECK untuk mengecek baterai. Jarum naik ke pita BATT dan kembali saat dilepas.</li><li>Seret di area skala, atau geser slider, untuk memutar jarum secara manual.</li><li>Pilih sampel (setrika, rice cooker, atau motor induksi 1 fasa), lalu dekatkan klip LINE dan EARTH ke terminal L, N, atau E. Klip menempel otomatis di terminal. Pastikan alat sudah dilepas dari stop kontak sebelum uji isolasi.</li><li>L ke N: kontinuitas elemen atau belitan (jarum 0 MΩ). L ke E atau N ke E: tahanan isolasi terhadap bodi. Patokan praktikum: ≥ 1 MΩ dianggap layak. Ini patokan umum, bukan standar resmi. Pakai Acak untuk berlatih menebak kondisi sampel.</li></ol></details></div></section>
+<section id="lxv" hidden><div class="mgtb"><button class="s" id="lxBack">← Kembali</button><b>Luxmeter UT383 BT</b><button class="s" id="lxReset">Reset</button></div>
+<div class="lxbody"><div class="lxgrid"><div class="lxcard">
+<svg id="lx-sc" viewBox="0 0 360 270" role="img" aria-label="Empat lampu menggantung di atas meja. Seret luxmeter ke kiri atau kanan.">
+<defs><radialGradient id="lx-gl"><stop offset="0" stop-color="#ffe8a6"/><stop offset="1" stop-color="#ffe8a6" stop-opacity="0"/></radialGradient></defs>
+<rect width="360" height="270" fill="#10161a"/><rect width="360" height="8" fill="#3a464d"/><g id="lx-dyn"></g>
+<rect y="250" width="360" height="20" fill="#2a3238"/><g id="lx-tk" stroke="#93a8af"></g>
+<g font-family="Arial,sans-serif" font-size="8" fill="#93a8af" text-anchor="middle"><text x="47" y="266">-0,5 m</text><text x="180" y="266">0</text><text x="313" y="266">+0,5 m</text></g>
+<g id="lx-sens" tabindex="0" role="slider" aria-label="Posisi luxmeter, geser dengan panah kiri dan kanan" style="cursor:grab"><rect x="-24" y="190" width="48" height="60" fill="transparent"/><rect x="-3" y="207" width="6" height="7" fill="#aab3b9"/><rect x="-11" y="212" width="22" height="38" rx="6" fill="#d31b14"/><rect x="-7" y="218" width="14" height="9" fill="#c9d3c4"/><ellipse cx="0" cy="204" rx="13" ry="9" fill="#1b1b1d"/><ellipse cx="0" cy="203" rx="9" ry="6" fill="#f4f4ef"/></g></svg>
+<div class="lxsel" id="lx-sel"></div>
+<p class="lxmini">Terbaca di alat: <b id="lxmini">-</b> · Total <span id="lxtw"></span></p>
+<label class="lxrow"><span>Tinggi lampu</span><input type="range" id="lxd" min="0.2" max="1.5" step="0.05" value="0.5"><output id="lxdo"></output></label>
+<label class="lxrow"><span>Geser sensor</span><input type="range" id="lxh" min="-0.6" max="0.6" step="0.01" value="0"><output id="lxho"></output></label>
+<div class="lxpre" id="lxpre"></div>
+<details><summary>Nilai teoritis dan asumsi</summary><p id="lxth"></p></details></div>
+<div class="lxr"><svg id="lx-svg" viewBox="0 0 300 480" role="group" aria-label="Luxmeter UNI-T UT383 BT (Mini Light Meter)">
+<defs>
+<radialGradient id="lx-dome" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#e9e9e4"/><stop offset="1" stop-color="#b3b3ac"/></radialGradient>
+<linearGradient id="lx-red" x1="0" x2="1"><stop offset="0" stop-color="#a30e0a"/><stop offset=".25" stop-color="#e8261e"/><stop offset=".6" stop-color="#d31b14"/><stop offset="1" stop-color="#930b07"/></linearGradient>
+<linearGradient id="lx-neck" x1="0" x2="1"><stop offset="0" stop-color="#7d8389"/><stop offset=".4" stop-color="#f3f5f6"/><stop offset="1" stop-color="#6c7278"/></linearGradient>
+<linearGradient id="lx-lcd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfd6ca"/><stop offset="1" stop-color="#b8c1b2"/></linearGradient>
+<linearGradient id="lx-lcdbl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9af2d6"/><stop offset="1" stop-color="#62d8b4"/></linearGradient>
+<linearGradient id="lx-btn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4b4e53"/><stop offset="1" stop-color="#1f2124"/></linearGradient>
+</defs>
+<ellipse cx="150" cy="62" rx="62" ry="59" fill="#1b1b1d"/><ellipse cx="150" cy="58" rx="58" ry="54" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="2"/>
+<circle cx="150" cy="62" r="39" fill="url(#lx-dome)" stroke="#8f8f88"/><ellipse cx="139" cy="48" rx="12" ry="7" fill="#fff" opacity=".6"/>
+<rect x="138" y="118" width="24" height="28" fill="url(#lx-neck)"/>
+<path d="M112 144Q150 128 188 144C214 164 228 232 226 300L226 418Q226 466 178 466L122 466Q74 466 74 418L74 300C72 232 86 164 112 144Z" fill="url(#lx-red)" stroke="#7a0a06" stroke-width="1.5"/>
+<rect x="100" y="186" width="52" height="18" rx="3" fill="#17181a"/><text x="126" y="199" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="12" fill="#fff">UNI-T</text>
+<text x="160" y="199" font-family="Arial,sans-serif" font-weight="800" font-style="italic" font-size="9" fill="#1a1a1a">UT383 BT</text>
+<rect x="88" y="210" width="124" height="88" rx="8" fill="#17181a"/><rect id="lx-bg" x="94" y="216" width="112" height="76" rx="4"/><rect x="94" y="216" width="112" height="24" rx="4" fill="#fff" opacity=".07"/>
+<g class="lxi" font-size="8"><text id="lx-hold" x="150" y="229" text-anchor="middle">HOLD</text><text id="lx-max" x="113" y="229">MAX</text><text id="lx-min" x="113" y="238">MIN</text>
+<path id="lx-bt" d="M99 226l7 6-3.5 3V222l3.5 3-7 6" fill="none" stroke="#151a15" stroke-width="1.3"/>
+<g id="lx-batt"><rect x="187" y="222" width="12" height="6" fill="none" stroke="#151a15"/><rect x="199" y="223.5" width="1.5" height="3"/><rect x="188.5" y="223.5" width="8" height="3"/></g>
+<text id="lx-k" x="190" y="262" font-size="9">k</text><text id="lx-u" x="204" y="284" text-anchor="end" font-size="10">Lux</text></g>
+<g id="lx-dig" transform="translate(104 246) skewX(-6)"></g>
+<text x="150" y="318" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="11" fill="#1a1a1a">Mini Light Meter</text>
+<g class="lxb" id="lx-pw" role="button" tabindex="0" aria-label="Tombol ON/OFF"><rect x="86" y="330" width="56" height="36" rx="14" fill="url(#lx-btn)" stroke="#0c0c0d"/><path d="M109.05 340.05A7 7 0 1 0 118.95 340.05M114 337.5V345" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><text x="114" y="361" class="bt" style="font-size:7.5px">ON/OFF</text></g>
+<g class="lxb" id="lx-un" role="button" tabindex="0" aria-label="Tombol LUX / FC (ganti satuan)"><rect x="158" y="330" width="56" height="36" rx="14" fill="url(#lx-btn)" stroke="#0c0c0d"/><text x="186" y="345" class="bt">LUX</text><text x="186" y="358" class="bt">FC</text></g>
+<g class="lxb" id="lx-mm" role="button" tabindex="0" aria-label="Tombol MAX / MIN"><rect x="86" y="374" width="56" height="36" rx="14" fill="url(#lx-btn)" stroke="#0c0c0d"/><text x="114" y="389" class="bt">MAX</text><text x="114" y="402" class="bt">MIN</text></g>
+<g class="lxb" id="lx-hd" role="button" tabindex="0" aria-label="Tombol HOLD / BL (tahan 1 detik untuk lampu latar)"><rect x="158" y="374" width="56" height="36" rx="14" fill="url(#lx-btn)" stroke="#0c0c0d"/><text x="186" y="389" class="bt">HOLD</text><text x="186" y="402" class="bt">BL</text></g>
+<text x="150" y="438" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="18" fill="#111">CE</text>
+<text x="150" y="456" text-anchor="middle" font-family="Arial,sans-serif" font-size="5.5" fill="#111">Contains FCC ID: NBHLSD-BTL</text>
+</svg><ul class="lxleg"><li><b>ON/OFF</b>: nyalakan atau matikan alat</li><li><b>LUX/FC</b>: ganti satuan (1 fc = 10,76 lux)</li><li><b>MAX/MIN</b>: tekan berulang: MAX, MIN, normal (tahan 1 dtk = keluar)</li><li><b>HOLD/BL</b>: tekan = tahan angka; tahan 1 dtk = lampu latar</li></ul></div>
+</div></div></section>
+
+</div><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const T=THREE,$=s=>document.querySelector(s),cl=(v,a,b)=>Math.max(a,Math.min(b,v)),V3=(x,y,z)=>new T.Vector3(x,y,z),PI=Math.PI;
+const cv=$('#c'),R=new T.WebGLRenderer({canvas:cv,antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));R.shadowMap.enabled=true;R.shadowMap.type=T.PCFSoftShadowMap;
+const M=(c,o)=>new T.MeshStandardMaterial({color:c,roughness:.5,metalness:.1,...o});
+const mesh=(g,m,p,x,y,z)=>{const o=new T.Mesh(g,m);o.position.set(x||0,y||0,z||0);o.castShadow=o.receiveShadow=true;p&&p.add(o);return o};
+const CT=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+const rr=(g,x,y,w,h,r,f)=>{g.fillStyle=f;g.beginPath();g.roundRect?g.roundRect(x,y,w,h,r):g.rect(x,y,w,h);g.fill()};
+const tx=(g,s,x,y,f,c,al)=>{g.font=f;g.fillStyle=c;g.textAlign=al||'center';g.fillText(s,x,y)};
+function fmt(v,u){for(const[s,x]of[[1e6,'M'],[1e3,'k'],[1,''],[1e-3,'m'],[1e-6,'µ'],[1e-9,'n'],[1e-12,'p']])if(v>=s*.9995)return(v/s).toPrecision(4)+' '+x+u;return'0.000 '+u}
+const sh=(v,u)=>fmt(v,u).replace(/\.?0+ /,' ').replace(' ','');
+const CC=['#000','#8b4513','#e00','#f80','#ee0','#080','#00c','#808','#888','#fff'];
+const bands=v=>{const e=Math.floor(Math.log10(v)),d=Math.round(v/10**(e-1));return[CC[Math.floor(d/10)],CC[d%10],CC[e-1]]};
+const dark=matchMedia('(prefers-color-scheme:dark)').matches;
+let S,SC,cam={th:0,ph:.95,d:19,t:V3(0,0,1),go:null},CAM=new T.PerspectiveCamera(40,1,.1,200),cur,last=0;
+
+/* ---------- input ---------- */
+const ray=new T.Raycaster,mouse=new T.Vector2,ptrs=new Map;let act=null,pinch=0;
+const ndc=e=>{const r=cv.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,CAM)};
+const onPlane=y=>{const p=V3(0,0,0);return ray.ray.intersectPlane(new T.Plane(V3(0,1,0),-y),p)?p:null};
+const pd=()=>{const a=[...ptrs.values()];return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)};
+cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(ptrs.size==2){act=null;pinch=pd();return}
+ ndc(e);if(S.wm){const c=S.items.flatMap(i=>i.pins).map(p=>[p,ray.ray.distanceToPoint(pinW(p))]).sort((x,y)=>x[1]-y[1])[0];if(c&&c[1]<.7){wireTap(c[0]);act=null;return}}
+ const h=ray.intersectObjects(S.pick,true)[0];let o=h&&h.object;while(o&&!o.userData.h)o=o.parent;
+ if(o){const k=o.userData.h;act={h:k,m:0,tx:0};k.down&&k.down();if(k.py!=null){const p=onPlane(k.py);act.off=p?k.obj.position.clone().sub(p):V3(0,0,0)}}else act={orb:1,m:0}};
+cv.onpointermove=e=>{const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+ if(ptrs.size==2){const d=pd();cam.d=cl(cam.d*pinch/d,6,45);pinch=d;return}
+ if(!act)return;act.m+=Math.abs(dx)+Math.abs(dy);act.tx+=dx;
+ if(act.orb){cam.go=null;cam.th-=dx*.007;cam.ph=cl(cam.ph-dy*.006,.15,1.5);return}
+ const h=act.h;if(h.py!=null){ndc(e);const q=onPlane(h.py);if(q){q.add(act.off);h.obj.position.x=cl(q.x,h.bx[0],h.bx[1]);h.obj.position.z=cl(q.z,h.bz[0],h.bz[1]);h.moved&&h.moved()}}else h.move&&h.move(act.tx)};
+cv.onpointerup=cv.onpointercancel=e=>{ptrs.delete(e.pointerId);if(act&&act.h){const h=act.h;h.up&&h.up(act.m);if(act.m<8&&h.tap)h.tap()}act=null};
+cv.addEventListener('wheel',e=>{e.preventDefault();cam.d=cl(cam.d*(1+e.deltaY*.001),6,45)},{passive:false});
+
+/* ---------- helpers 3D ---------- */
+function label(txt,w){const c=CT(w||256,64),t=new T.CanvasTexture(c),s=new T.Sprite(new T.SpriteMaterial({map:t,depthTest:false}));s.renderOrder=9;s.userData={c,t};s.scale.set((w||256)/100,.64,1);lab(s,txt);return s}
+function lab(s,txt){const{c,t}=s.userData,g=c.getContext('2d');g.clearRect(0,0,c.width,64);rr(g,2,8,c.width-4,48,14,'rgba(255,255,255,.88)');tx(g,txt,c.width/2,43,'600 28px sans-serif','#13232b');t.needsUpdate=true}
+function mkKnob(par,x,y,z,r,angs,i0,cb){const g=new T.Group,rot=new T.Group;g.position.set(x,y,z);par.add(g);g.add(rot);
+ mesh(new T.CylinderGeometry(r,r*1.06,.45,28),M('#1b1c20',{roughness:.35}),rot,0,.22,0);mesh(new T.CylinderGeometry(r*.72,r*.72,.12,28),M('#2e3138'),rot,0,.48,0);
+ mesh(new T.BoxGeometry(r*.18,.1,r*.8),M('#ff8a3d',{emissive:'#7a3510'}),rot,0,.55,-r*.45);
+ const h={i:i0,tap(){this.set((this.i+1)%angs.length)},down(){this.i0=this.i},move(t){const n=cl(this.i0+Math.round(t/26),0,angs.length-1);n!=this.i&&this.set(n)},set(n){this.i=n;g.userData.ta=angs[n];cb(n)}};
+ g.userData={h,rot,ca:angs[i0],ta:angs[i0]};h.set(i0);S.pick.push(g);S.knobs.push(g);return g}
+function mkBtn(par,x,y,z,w,d,fn){const b=mesh(new T.BoxGeometry(w,.3,d),M('#232a33'),par,x,y+.15,z);b.userData.h={tap(){b.position.y-=.12;setTimeout(()=>b.position.y+=.12,140);fn()}};S.pick.push(b)}
+function jack(par,x,y,z,col){const g=mesh(new T.CylinderGeometry(.36,.36,.3,20),M('#0b0b0d'),par,x,y+.15,z);mesh(new T.TorusGeometry(.4,.07,8,24).rotateX(PI/2),M(col,{emissive:col,emissiveIntensity:.25}),par,x,y+.3,z);return V3(par.position.x+x,y+.6,par.position.z+z)}
+function setSel(it){S.sel=it;$('#selc').hidden=!it;it&&($('#seln').textContent='Dipilih: '+it.lb)}
+function addItem(sp,x,z){const g=new T.Group,t=sp.t,v=sp.v,it={g,sp,pins:[]};g.position.set(x,0,z);SC.add(g);let ph=.55,px=2.2,ks=['a','b'],lb;
+ const lead=(a,b)=>mesh(new T.CylinderGeometry(.06,.06,b-a,8).rotateZ(PI/2),M('#cfd3da',{metalness:.8,roughness:.3}),g,(a+b)/2,ph,0);
+ const cyl=(r,l,c,xx,y,o)=>mesh(new T.CylinderGeometry(r,r,l,24).rotateZ(PI/2),M(c,o),g,xx,y==null?ph:y,0);
+ if(t=='R'){lead(-2.2,2.2);cyl(.34,1.6,'#dcc08e');bands(v).forEach((c,i)=>cyl(.355,.13,c,-.55+i*.3));cyl(.355,.13,'#d4af37',.6);lb=sp.n||sh(v,'Ω')}
+ if(t=='C'){lead(-2.2,2.2);if(v<1e-6)mesh(new T.CylinderGeometry(.7,.7,.22,28).rotateX(PI/2),M('#e9a23b'),g,0,.95,0);else{cyl(.55,1.7,'#1f4e8c');cyl(.565,.35,'#c9d3e0',-.7)}lb=sh(v,'F')}
+ if(t=='L'){lead(-2.2,2.2);cyl(.3,1.8,'#7a4a1c');for(let i=-3;i<=3;i++)mesh(new T.TorusGeometry(.42,.1,8,20).rotateY(PI/2),M('#c4782c',{metalness:.6}),g,i*.24,ph,0);lb=sh(v,'H')}
+ if(t=='B'){ks=['-','+'];if(v>5){lead(-2.2,-1.1);lead(1.1,2.2);mesh(new T.BoxGeometry(2.2,1.1,1.4),M('#2a2a2a'),g,0,.55,0);mesh(new T.BoxGeometry(2.2,.1,1.4),M('#d4af37'),g,0,1.1,0)}else{lead(-2.2,-1.3);lead(1.3,2.2);cyl(.5,2.6,'#2f7d46');cyl(.2,.25,'#d4af37',1.4)}lb=sp.n||('Baterai '+v+' V'+(sp.rs?' + R '+sh(sp.rs,'Ω'):''))}
+ if(t=='AC'){px=1;ph=.95;ks=['L','N'];mesh(new T.BoxGeometry(2.9,.9,2.3),M('#e8e4d8'),g,0,.45,0);[-1,1].forEach(a=>mesh(new T.CylinderGeometry(.22,.22,.04,16),M('#222'),g,a,.92,0));lb='Stop kontak 220 V~'}
+ if(t=='LD'){const a=AP[sp.a];px=1.8;ph=.5;lead(-1.8,-.8);lead(.8,1.8);ldModel(it,a);lb=a.n}
+ [-px,px].forEach((dx,i)=>{const mt=M('#ffd54a',{emissive:'#a07a00'}),m=mesh(new T.TorusGeometry(.32,.07,8,20).rotateX(PI/2),mt,g,dx,ph,0);m.castShadow=false;it.pins.push({it,dx,y:ph,k:ks[i],mt})});
+ it.lb=lb;const sp2=label(lb);sp2.position.set(0,t=='LD'?3.9:2.1,0);g.add(sp2);
+ g.userData.h={obj:g,py:0,bx:S.ibx||[-8,8],bz:S.ibz||[3.4,9.8],down(){setSel(it)},moved(){S.wires.forEach(wireUpd);S.probes.forEach(p=>p.sync());S.dirty=1;S.upd()}};S.pick.push(g);S.items.push(it)}
+function delSel(){const it=S.sel;if(!it)return;if(it.isW){dropWires(w=>w===it);setSel(null);S.dirty=1;S.upd();return}dropWires(w=>w.a.it===it||w.b.it===it);SC.remove(it.g);S.pick=S.pick.filter(o=>o!==it.g);S.items=S.items.filter(o=>o!==it);S.probes.forEach(p=>{if(p.pin&&p.pin.it===it)p.pin=null});setSel(null);S.dirty=1;S.upd()}
+function mkProbe(col,jp,x,z){const g=new T.Group,P={g,pin:null};
+ mesh(new T.ConeGeometry(.09,.8,10).rotateX(PI),M('#d8dde2',{metalness:.9,roughness:.25}),g,0,.4,0);mesh(new T.CylinderGeometry(.2,.17,.5,14),M('#ddd'),g,0,1.05,0);mesh(new T.CylinderGeometry(.17,.17,2,14),M(col,{roughness:.4}),g,0,2.2,0);
+ g.rotation.x=-.5;g.position.set(x,.4,z);SC.add(g);
+ const cm=new T.Mesh(new T.BufferGeometry,M(col==='#222'?'#1b1b1b':col,{roughness:.6}));cm.castShadow=true;SC.add(cm);P.cm=cm;P.jp=jp;
+ P.sync=()=>{if(P.pin){const p=P.pin;g.position.set(p.it.g.position.x+p.dx,p.y,p.it.g.position.z)}};
+ P.cab=()=>{P.sync();g.updateMatrixWorld(true);const e=g.localToWorld(V3(0,3.2,0)),a=V3(jp.x,jp.y+.8,jp.z),m1=a.clone().lerp(e,.4),m2=a.clone().lerp(e,.75);m1.y=.3;m2.y=.35;
+  cm.geometry.dispose();cm.geometry=new T.TubeGeometry(new T.CatmullRomCurve3([jp.clone(),a,m1,m2,e]),32,.08,6)};
+ g.userData.h={obj:g,py:.4,bx:[-9.5,9.5],bz:[1.9,10.5],moved(){P.pin=null;S.dirty=1;S.upd()},up(){let b=null,d=1.2;S.items.forEach(it=>it.pins.forEach(p=>{const e=Math.hypot(it.g.position.x+p.dx-g.position.x,it.g.position.z-g.position.z);if(e<d){d=e;b=p}}));P.pin=b;S.dirty=1;S.upd()}};
+ S.pick.push(g);S.probes.push(P);P.cab()}
+const pdist=()=>S.probes[0].g.position.distanceTo(S.probes[1].g.position);
+
+/* ---------- Solver rangkaian: analisis nodal kompleks (DC: w=0, AC: w=2π·50) ---------- */
+/* tiap kaki komponen = satu simpul; kabel = hambatan 0,2 mΩ; baterai = sumber + hambatan dalam 0,5 Ω; stop kontak = sumber AC + impedansi saluran 0,6 Ω */
+const W50=2*PI*50,RW=2e-4;
+function ldZ(q,rt){const a=AP[q.a];let m=1,pf=a.pf;if(a.w=='l'){const e=Math.exp(-rt/.9);m=1+3.2*e;pf=a.pf*(1-.35*e)}const z=220*220*pf/(a.p*m),ph=Math.acos(pf);return[z*Math.cos(ph),z*Math.sin(ph)]}
+function csolve(Ar,Ai,br,bi,N){const vr=Float64Array.from(br),vi=Float64Array.from(bi);
+ for(let c=0;c<N;c++){let p=c,m=-1;for(let r=c;r<N;r++){const q=Ar[r][c]*Ar[r][c]+Ai[r][c]*Ai[r][c];if(q>m){m=q;p=r}}
+  if(p!=c){[Ar[c],Ar[p]]=[Ar[p],Ar[c]];[Ai[c],Ai[p]]=[Ai[p],Ai[c]];[vr[c],vr[p]]=[vr[p],vr[c]];[vi[c],vi[p]]=[vi[p],vi[c]]}
+  const dr=Ar[c][c],di=Ai[c][c],dd=dr*dr+di*di;
+  for(let r=c+1;r<N;r++){const fr=(Ar[r][c]*dr+Ai[r][c]*di)/dd,fi=(Ai[r][c]*dr-Ar[r][c]*di)/dd;if(!fr&&!fi)continue;
+   for(let k=c;k<N;k++){Ar[r][k]-=fr*Ar[c][k]-fi*Ai[c][k];Ai[r][k]-=fr*Ai[c][k]+fi*Ar[c][k]}vr[r]-=fr*vr[c]-fi*vi[c];vi[r]-=fr*vi[c]+fi*vr[c]}}
+ for(let c=N-1;c>=0;c--){let sr=vr[c],si=vi[c];for(let k=c+1;k<N;k++){sr-=Ar[c][k]*vr[k]-Ai[c][k]*vi[k];si-=Ar[c][k]*vi[k]+Ai[c][k]*vr[k]}
+  const dr=Ar[c][c],di=Ai[c][c],dd=dr*dr+di*di;vr[c]=(sr*dr+si*di)/dd;vi[c]=(si*dr-sr*di)/dd}
+ return{vr,vi}}
+/* o: w (rad/s, 0 = DC), off (semua sumber mati), adds [[pinA,pinB,G,B]] cabang tambahan (meter), virt [[pinA,pinB]] kabel virtual, inj [pinA,pinB] arus uji 1 A */
+function ckRun(o){const pins=[];S.items.forEach(it=>it.pins.forEach(p=>{p.n=pins.length;pins.push(p)}));const N=pins.length,w=o.w||0,Yr=[],Yi=[],Ir=new Float64Array(N),Ii=new Float64Array(N);
+ for(let i=0;i<N;i++){Yr.push(new Float64Array(N));Yi.push(new Float64Array(N));Yr[i][i]=1e-10}
+ const br=(a,b,gr,gi)=>{Yr[a][a]+=gr;Yr[b][b]+=gr;Yr[a][b]-=gr;Yr[b][a]-=gr;Yi[a][a]+=gi;Yi[b][b]+=gi;Yi[a][b]-=gi;Yi[b][a]-=gi},zb=(a,b,zr,zi)=>{const d=zr*zr+zi*zi;br(a,b,zr/d,-zi/d)},cs=(a,b,r)=>{Ir[b]+=r;Ir[a]-=r};
+ S.items.forEach(it=>{const q=it.sp,a=it.pins[0].n,b=it.pins[1].n;
+  if(q.t=='R')br(a,b,1/rv(q),0);
+  else if(q.t=='C'){if(w)zb(a,b,(q.d||0)/(2*PI*1e3*q.v),-1/(w*q.v))}
+  else if(q.t=='L')zb(a,b,q.rs||1,w*q.v);
+  else if(q.t=='B'){const g=1/((q.rs||0)+.5);br(a,b,g,0);if(!w&&!o.off)cs(a,b,q.v*g)}
+  else if(q.t=='AC'){br(a,b,1/.6,0);if(w&&!o.off&&!S.aoff)cs(b,a,(q.v+(S.gadd||0))/.6)}
+  else if(q.t=='LD'){const z=ldZ(q,it.rt==null?99:it.rt);if(w)zb(a,b,z[0],z[1]);else br(a,b,1/z[0],0)}});
+ S.wires.forEach(x=>br(x.a.n,x.b.n,1/RW,0));(o.virt||[]).forEach(x=>br(x[0].n,x[1].n,1/RW,0));(o.adds||[]).forEach(x=>br(x[0].n,x[1].n,x[2],x[3]||0));
+ if(o.inj)cs(o.inj[1].n,o.inj[0].n,1);
+ return csolve(Yr,Yi,Ir,Ii,N)}
+const cd=(r,a,b)=>[r.vr[a.n]-r.vr[b.n],r.vi[a.n]-r.vi[b.n]],mg=z=>Math.hypot(z[0],z[1]);
+/* pengukuran: voltmeter (10 MΩ), ammeter (hambatan Rm), ohmmeter/LCR (sumber mati, arus uji 1 A) */
+const ckVolt=(a,b,ac)=>cd(ckRun({w:ac?W50:0,adds:[[a,b,1e-7]]}),a,b),ckAmp=(a,b,Rm,ac)=>{const z=cd(ckRun({w:ac?W50:0,adds:[[a,b,1/Rm]]}),a,b);return[z[0]/Rm,z[1]/Rm]},ckZ=(a,b,w)=>cd(ckRun({w,off:1,inj:[a,b]}),a,b);
+/* kabel penghubung: ketuk dua kaki komponen pada mode Kabel */
+const pinW=p=>V3(p.it.g.position.x+p.dx,p.y,p.it.g.position.z),WC=['#e53935','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1'];
+function wireUpd(w){const A=pinW(w.a),B=pinW(w.b),yt=S.wy||Math.max(A.y,B.y)+1.3+(w.k%3)*.35,m=A.clone().lerp(B,.5);m.y=yt+.4;const c=[A,V3(A.x,yt,A.z),m,V3(B.x,yt,B.z),B];
+ w.pts=[];for(let i=0;i<4;i++)for(let k=0;k<6;k++)w.pts.push(c[i].clone().lerp(c[i+1],k/6));w.pts.push(B);
+ w.mesh.geometry.dispose();w.mesh.geometry=new T.TubeGeometry(new T.CatmullRomCurve3(c),40,.1,8)}
+function addWire(a,b){if(a===b||S.wires.some(w=>(w.a===a&&w.b===b)||(w.a===b&&w.b===a)))return;const w={a,b,k:S.wires.length,isW:1,lb:'Kabel'};
+ w.mesh=new T.Mesh(new T.BufferGeometry,M(WC[w.k%6],{roughness:.5}));w.mesh.castShadow=true;SC.add(w.mesh);w.mesh.userData.h={tap(){setSel(w)}};S.pick.push(w.mesh);S.wires.push(w);wireUpd(w);S.upd()}
+function dropWires(f){S.wires.filter(f).forEach(w=>{SC.remove(w.mesh);S.pick=S.pick.filter(o=>o!==w.mesh)});S.wires=S.wires.filter(w=>!f(w))}
+function wireTap(p){if(!S.wa)S.wa=p;else{if(p!==S.wa)addWire(S.wa,p);S.wa=null}S.upd()}
+
+/* ---------- Multimeter analog ---------- */
+const RNG=[0,250,50,10,10,50,250,1,10,1e3],MD=['O','AC','AC','AC','DC','DC','DC','R','R','R'],LB=['OFF','ACV 250','ACV 50','ACV 10','DCV 10','DCV 50','DCV 250','Ω×1','Ω×10','Ω×1k'];
+function buildMM(){S.z=.15;S.k=0;S.nf=0;S.nt=0;S.nv=0;S.ls=-1;const W=7.2,D=9,BH=1.2,IG=new T.Group;IG.position.set(0,0,-3);SC.add(IG);
+ const uv=(u,v)=>[(u/512-.5)*W,(v/640-.5)*D];
+ const b=CT(512,640),g=b.getContext('2d');rr(g,0,0,512,640,44,'#c8402a');rr(g,14,14,484,612,34,'#2a2d34');rr(g,36,36,440,262,18,'#f3edd2');
+ const P=(f,r)=>{const a=(-55+110*f)*PI/180;return[256+r*Math.sin(a),280-r*Math.cos(a)]};
+ const tk=(f,r,l,c,t)=>{const[a,b2]=P(f,r),[x,y]=P(f,r-(l?14:8)),[u,w]=P(f,r-30);g.strokeStyle=c;g.lineWidth=l?2.4:1.4;g.beginPath();g.moveTo(a,b2);g.lineTo(x,y);g.stroke();t!=null&&tx(g,t,u,w+5,'600 15px sans-serif',c)};
+ [100,50,20,10,5,2,1,0].forEach(x=>tk(10/(10+x),198,1,'#7a1d12',x));tk(0,198,1,'#7a1d12','∞');
+ for(let i=0;i<=10;i++){tk(i/10,154,i%2==0,'#222',i%2?null:i*5);tk(i/10,112,i%2==0,'#222',i%2?null:i)}
+ tx(g,'V 0–50  (×5 = 250)',256,218,'600 14px sans-serif','#333');tx(g,'V 0–10',256,238,'600 14px sans-serif','#333');tx(g,'Ω  ×1  ×10  ×1k',256,258,'600 14px sans-serif','#7a1d12');
+ const AN=LB.map((_,i)=>-135+30*i);AN.forEach((a,i)=>{const r=a*PI/180;tx(g,LB[i],256+112*Math.sin(r),475-112*Math.cos(r),'600 15px sans-serif',MD[i]=='AC'?'#ff8f80':MD[i]=='R'?'#7fe3a0':'#fff')});
+ tx(g,'0Ω ADJ',88,448,'600 14px sans-serif','#fff');tx(g,'seret ↔',88,466,'12px sans-serif','#9ab');tx(g,'COM',128,572,'600 14px sans-serif','#fff');tx(g,'+  V  Ω',384,572,'600 14px sans-serif','#ff8f80');tx(g,'ANALOG MULTIMETER',256,320,'600 15px sans-serif','#c6d0d6');
+ S.base=b;const c=CT(512,640);S.g=c.getContext('2d');S.tex=new T.CanvasTexture(c);S.tex.anisotropy=8;
+ mesh(new T.BoxGeometry(W,BH,D),M('#2a2d34'),IG,0,BH/2,0);const fp=mesh(new T.PlaneGeometry(W,D),M('#fff',{map:S.tex,roughness:.5}),IG,0,BH+.01,0);fp.rotation.x=-PI/2;
+ const[kx,kz]=uv(256,470);mkKnob(IG,kx,BH,kz,.86,AN,0,i=>{S.k=i;S.upd()});
+ const[zx,zz]=uv(88,390),zk=mkKnob(IG,zx,BH,zz,.44,[0],0,()=>{});zk.userData.ta=zk.userData.ca=-135+270*S.z;
+ zk.userData.h={down(){this.z0=S.z},move(t){S.z=cl(this.z0+t/150,0,1);zk.userData.ta=-135+270*S.z;S.upd()}};
+ const[j1x,j1z]=uv(128,604),[j2x,j2z]=uv(384,604),jc=jack(IG,j1x,BH,j1z,'#ffffff'),jr=jack(IG,j2x,BH,j2z,'#ff3b30');
+ S.pal=[['Baterai 9 V',{t:'B',v:9}],['Baterai 1,5 V',{t:'B',v:1.5}],['R 220 Ω',{t:'R',v:220}],['R 1 kΩ',{t:'R',v:1e3}],['R 4,7 kΩ',{t:'R',v:4700}],['R 47 kΩ',{t:'R',v:47e3}],['Stop kontak 220 V',{t:'AC',v:220}]];
+ [[0,-5,5],[1,5,5],[2,-4.5,8.3],[4,4.5,8.3],[6,0,6.6]].forEach(a=>addItem(S.pal[a[0]][1],a[1],a[2]));
+ mkProbe('#ff3b30',jr,3,2.8);mkProbe('#222',jc,-3,2.8);
+ S.steps=['Pilih besaran dan range pada selektor (DCV, ACV, atau Ω).','Ohm: tempelkan kedua probe, geser knob 0Ω ADJ hingga jarum tepat di 0 (kanan).','Tarik ujung probe ke kaki komponen: merah ke +, hitam ke −.'];
+ S.frame=dt=>{const a=(S.nt-S.nf)*120-S.nv*11;S.nv+=a*dt;S.nf+=S.nv*dt;if(Math.abs(S.nf-S.ls)>1e-4){S.ls=S.nf;const q=S.g,an=(-55+110*cl(S.nf,-.07,1.06))*PI/180;q.drawImage(S.base,0,0);q.strokeStyle='rgba(0,0,0,.2)';q.lineWidth=5;q.beginPath();q.moveTo(260,286);q.lineTo(260+205*Math.sin(an),286-205*Math.cos(an));q.stroke();q.strokeStyle='#d11';q.lineWidth=4;q.beginPath();q.moveTo(256,280);q.lineTo(256+205*Math.sin(an),280-205*Math.cos(an));q.stroke();q.fillStyle='#444';q.beginPath();q.arc(256,280,15,0,7);q.fill();S.tex.needsUpdate=true}};
+ S.upd=()=>{const i=S.k,m=MD[i],r=RNG[i],[a,b2]=S.probes.map(p=>p.pin),s=pdist()<.9,ok=a&&b2&&a!==b2;let f=0,msg='',val='';
+  if(!i)msg='Selektor di OFF. Putar ke range yang sesuai.';
+  else if(m=='R'){const c=10*r,gn=.8+.4*S.z;let x=Infinity;
+   if(s||(a&&a===b2)){x=0;msg='Probe terhubung singkat. Putar 0Ω ADJ hingga jarum tepat di 0.'}
+   else if(ok){if(Math.max(mg(ckVolt(a,b2,0)),mg(ckVolt(a,b2,1)))>.3)msg='Bahaya: jangan ukur Ω pada rangkaian bertegangan.';
+    else{const z=ckZ(a,b2,0)[0];if(z<1e8){x=z;msg='Bacaan skala Ω dikali '+(r==1?'1':r==10?'10':'1k')+'.'}else msg='Rangkaian terbuka: jarum tetap di ∞.'}}
+   else msg='Tempelkan kedua probe pada dua titik rangkaian (misalnya kaki resistor).';
+   f=x==Infinity?0:gn*c/(c+x);val=x==Infinity?'Rx = ∞ (terbuka)':'Rx = '+sh(x,'Ω')}
+  else{let v=0;if(ok&&!s)v=m=='DC'?ckVolt(a,b2,0)[0]:mg(ckVolt(a,b2,1));
+   f=v/r;val='V = '+(+v.toFixed(3))+' V';
+   if(!ok)msg='Tempelkan probe pada dua titik rangkaian.';
+   else if(Math.abs(v)<.005)msg=m=='AC'?'Tidak ada tegangan AC di antara kedua titik. Pakai ACV pada stop kontak.':'Tidak ada tegangan DC di antara kedua titik. Pakai DCV pada baterai atau rangkaian bersumber.';
+   else if(v<0)msg='Polaritas terbalik, jarum ke kiri. Tukar probe merah dan hitam.';
+   else if(v>r)msg='Melebihi range. Naikkan ke range yang lebih besar.';
+   else msg='Baca skala '+(r==10?'0–10':'0–50')+(r==250?' lalu kalikan 5':'')+'.'}
+  S.nt=f;S.msg=msg;S.val=val}}
+
+/* ---------- LCR meter ---------- */
+function buildLCR(){S.k=0;S.f=1;S.L={};const W=7.2,D=9,BH=1.2,IG=new T.Group;IG.position.set(0,0,-3);SC.add(IG);const uv=(u,v)=>[(u/512-.5)*W,(v/640-.5)*D];
+ const c=CT(512,640);S.g=c.getContext('2d');S.tex=new T.CanvasTexture(c);S.tex.anisotropy=8;
+ mesh(new T.BoxGeometry(W,BH,D),M('#3b4350'),IG,0,BH/2,0);const fp=mesh(new T.PlaneGeometry(W,D),M('#fff',{map:S.tex,roughness:.5}),IG,0,BH+.01,0);fp.rotation.x=-PI/2;
+ const AN=[-120,-60,0,60,120],LBL=['OFF','R','C','L','AUTO'];
+ S.draw=()=>{const g=S.g,L=S.L;rr(g,0,0,512,640,44,'#3b4350');rr(g,14,14,484,612,34,'#2f3641');rr(g,36,36,440,300,18,'#12161b');rr(g,50,50,412,272,10,L.on?'#b8cf9a':'#7d8a6e');
+  if(L.on){tx(g,L.mode,70,92,'500 24px monospace','#1d2b14','left');tx(g,L.fq,442,92,'500 24px monospace','#1d2b14','right');tx(g,L.main,256,190,'500 '+(L.main.length>6?58:72)+'px monospace','#1d2b14');tx(g,L.unit+'  '+L.s2,256,246,'500 30px monospace','#1d2b14');tx(g,L.z,256,296,'500 24px monospace','#1d2b14')}
+  AN.forEach((a,i)=>{const r=a*PI/180;tx(g,LBL[i],256+112*Math.sin(r),515-112*Math.cos(r),'600 15px sans-serif','#fff')});
+  tx(g,'FREQ',92,468,'600 14px sans-serif','#fff');tx(g,'LCR-2000',256,366,'600 16px sans-serif','#c6d0d6');tx(g,'Hi',150,572,'600 15px sans-serif','#ff8f80');tx(g,'Lo',362,572,'600 15px sans-serif','#fff');S.tex.needsUpdate=true};
+ const[kx,kz]=uv(256,515);mkKnob(IG,kx,BH,kz,.86,AN,0,i=>{S.k=i;S.upd()});
+ const[bx,bz]=uv(92,420);mkBtn(IG,bx,BH,bz,1.4,.7,()=>{S.f=(S.f+1)%3;S.upd()});
+ const[j1x,j1z]=uv(150,604),[j2x,j2z]=uv(362,604),jh=jack(IG,j1x,BH,j1z,'#ff3b30'),jl=jack(IG,j2x,BH,j2z,'#ffffff');
+ S.pal=[['R 100 Ω',{t:'R',v:100}],['R 4,7 kΩ',{t:'R',v:4700}],['C 100 nF',{t:'C',v:1e-7,d:.02}],['C 470 µF',{t:'C',v:4.7e-4,d:.08}],['L 10 mH',{t:'L',v:.01,rs:3.2}],['L 100 µH',{t:'L',v:1e-4,rs:.4}]];
+ [[0,-5,5],[1,5,5],[2,-5,8.3],[3,0,8.3],[4,5,8.3]].forEach(a=>addItem(S.pal[a[0]][1],a[1],a[2]));
+ mkProbe('#ff3b30',jh,-1.5,2.8);mkProbe('#222',jl,2,2.8);
+ S.steps=['Putar selektor ke R, C, L, atau AUTO.','Ketuk tombol FREQ untuk memilih 100 Hz, 1 kHz, atau 10 kHz.','Tarik klip merah dan hitam ke dua kaki satu komponen.'];
+ S.upd=()=>{const[a,b]=S.probes.map(p=>p.pin),ok=a&&b&&a!==b,fq=[100,1e3,1e4][S.f],w=2*PI*fq,L=S.L;let msg='',val='';
+  L.on=S.k>0;L.fq=fq>=1e3?fq/1e3+' kHz':fq+' Hz';L.mode=['','Rs','Cs','Ls','AUTO'][S.k];L.main='OPEN';L.unit='';L.s2='';L.z='';
+  if(!L.on)msg='Alat OFF. Putar selektor ke R, C, L, atau AUTO.';
+  else if(!ok){L.main=a&&a===b?'SHORT':'OPEN';msg='Jepit kedua klip pada dua titik rangkaian (sumber tegangan sebaiknya dilepas).'}
+  else{const j=1+(Math.random()-.5)*.004,Z=ckZ(a,b,w),R0=ckZ(a,b,0)[0],mz=mg(Z);let md='-RCL'[S.k],x=null,U='';
+   if(S.k==4)md=R0<1e8?(Z[1]>.05*Z[0]?'L':'R'):(Z[1]<0?'C':'');
+   if(md=='R'&&R0<1e8){x=R0;U='Ω'}else if(md=='C'&&Z[1]<-1e-9){x=-1/(w*Z[1]);U='F'}else if(md=='L'&&Z[1]>1e-9&&R0<1e8){x=Z[1]/w;U='H'}
+   if(x==null){if(md=='R'&&R0>=1e8){L.main='OPEN';msg='Tidak ada jalur DC di antara kedua klip (terbuka atau kapasitor).'}else{L.main='----';msg='Selektor tidak sesuai rangkaian ini. Coba AUTO atau pilih jenis yang tepat.'}}
+   else{const q=fmt(x*j,U).split(' ');L.main=q[0];L.unit=q[1];
+    if(md=='C'){L.s2='D='+(Z[0]/-Z[1]).toFixed(3);L.z='|Z|='+fmt(mz,'Ω')}
+    if(md=='L'){L.s2='Q='+(Z[1]/Z[0]).toFixed(1);L.z='|Z|='+fmt(mz,'Ω')}
+    if(md=='R')L.z='θ ≈ '+Math.round(Math.atan2(Z[1],Z[0])*180/PI)+'°';
+    msg=(S.k==4?'AUTO mengenali: '+{R:'resistor',C:'kapasitor',L:'induktor'}[md]+'. ':'')+'Nilai berubah menurut frekuensi uji.';val='Nilai terukur = '+sh(x,U)}}
+  S.draw();S.msg=msg;S.val=val};}
+
+/* ---------- Tang ampere ---------- */
+const LD=[[100,'Lampu pijar 100 W','💡',1],[45,'Kipas angin 45 W','🌀',.82],[350,'Setrika 350 W','👕',1],[1e3,'Pemanas 1000 W','🔥',1]];
+/* arus neto pada kabel penghubung yang melewati rahang tang (tanda arah dihitung terhadap sumbu rahang) */
+function clWire(D){const J=V3(D.position.x,4.2,D.position.z);let net=[0,0],n=0,r=null;S.wires.forEach(w=>{let bk=-1,bd=.6;w.pts.forEach((p,k)=>{const d=p.distanceTo(J);if(d<bd){bd=d;bk=k}});if(bk<0)return;
+  if(!r)r=ckRun({w:W50});const q=cd(r,w.a,w.b),dz=Math.sign(w.pts[Math.min(bk+1,w.pts.length-1)].z-w.pts[Math.max(bk-1,0)].z)||1;net[0]+=q[0]/RW*dz;net[1]+=q[1]/RW*dz;n++});return n?{I:mg(net),n}:null}
+function buildCL(){S.k=0;S.open=true;S.on=true;S.ld=LD[0];const H=4.2;S.pal=[['Stop kontak 220 V',{t:'AC',v:220}],['Lampu pijar 40 W',{t:'LD',a:'lamp'}],['Kipas angin 45 W',{t:'LD',a:'fan'}],['Setrika 350 W',{t:'LD',a:'iron'}],['Pemanas 1000 W',{t:'LD',a:'heat'}],['Charger laptop 65 W',{t:'LD',a:'chg'}]];S.ibx=[-9.5,-4.8];S.ibz=[-6.5,3.4];S.spw=()=>[-9+Math.random()*3.5,-5.5+Math.random()*8];S.wy=H;
+ const tw=(w,h,d,x,z,c)=>mesh(new T.BoxGeometry(w,h,d),M(c),SC,x,h/2,z);tw(2.8,5.2,2,0,-8.2,'#e8e4d8');tw(5.8,5.2,2.4,0,5.6,'#2b303a');
+ const ol=label('Stop kontak 220 V~',320);ol.position.set(0,6.2,-8.2);ol.scale.set(3.2,.64,1);SC.add(ol);const ll=label('',384);ll.position.set(0,6.2,5.6);ll.scale.set(3.84,.64,1);SC.add(ll);
+ mesh(new T.CylinderGeometry(.34,.34,2.6,16).rotateX(PI/2),M('#8a8f98'),SC,0,H,-5.9);
+ const wr=(c,s)=>{const p=[[0,-4.8],[0,-4.3],[s*.9,-3.7],[s*1.8,-3.1],[s*1.8,-2.4],[s*1.8,0],[s*1.8,2.5],[s*1.8,4.5]].map(q=>V3(q[0],H,q[1]));mesh(new T.TubeGeometry(new T.CatmullRomCurve3(p,false,'catmullrom',.3),60,.13,8),M(c),SC)};wr('#8b5a2b',-1);wr('#2f6fd0',1);
+ const fl=label('Fasa (L)',200),fn=label('Netral (N)',220);fl.position.set(-1.8,H+1,-.5);fn.position.set(1.8,H+1,-.5);fl.scale.set(2,.64,1);fn.scale.set(2.2,.64,1);SC.add(fl,fn);
+ const D=new T.Group;D.position.set(4.8,0,2.4);SC.add(D);
+ const b=CT(256,331),g=b.getContext('2d');
+ const draw=()=>{const L=S.cd||{};g.clearRect(0,0,256,331);rr(g,0,0,256,331,26,'#f2b705');rr(g,22,30,212,110,10,'#2b2b2b');rr(g,30,38,196,94,6,S.k?'#a8bb92':'#7d8a6e');
+  if(S.k){tx(g,L.v||'0.00',216,108,'500 58px monospace','#1d2b14','right');tx(g,'A~ '+(S.k==1?'40':'400'),42,62,'500 20px monospace','#1d2b14','left')}
+  [['OFF',-60],['40A',0],['400A',60]].forEach(([l,a])=>{const r=a*PI/180;tx(g,l,128+70*Math.sin(r),240-70*Math.cos(r)+5,'600 18px sans-serif','#3a2b00')});tx(g,'CLAMP METER',128,318,'600 14px sans-serif','#5a4300');S.ct.needsUpdate=true};
+ S.ct=new T.CanvasTexture(b);S.ct.anisotropy=8;
+ mesh(new T.BoxGeometry(2.4,3.1,.8),M('#f2b705'),D,0,1.55,0);mesh(new T.BoxGeometry(1.1,.5,.8),M('#2b2b2b'),D,0,3.2,0);
+ const fp=mesh(new T.PlaneGeometry(2.4,3.1),M('#fff',{map:S.ct,roughness:.5}),D,0,1.55,.405);
+ const jw=mesh(new T.TorusGeometry(.95,.24,14,40),M('#2b2b2b',{roughness:.4}),D,0,H,0);
+ const setJ=()=>{jw.geometry.dispose();jw.geometry=new T.TorusGeometry(.95,.24,14,40,S.open?5.2:PI*2);jw.rotation.z=S.open?2.11:0};
+ const lv=mesh(new T.BoxGeometry(.4,1,.55),M('#cc3333'),D,1.4,2.9,0);lv.userData.h={tap(){S.open=!S.open;setJ();S.upd()}};S.pick.push(lv);
+ const hd=new T.Group;hd.position.set(0,1.0,.43);hd.rotation.x=PI/2;D.add(hd);mkKnob(hd,0,0,0,.42,[-60,0,60],0,i=>{S.k=i;S.upd()});
+ D.userData.h={obj:D,py:0,bx:[-9.5,6],bz:[-7.4,4.2],moved(){S.upd()}};S.pick.push(D);setJ();
+ const ex=$('#ex');ex.innerHTML='';LD.forEach(l=>{const b2=document.createElement('button');b2.className='s';b2.textContent=l[1];b2.onclick=()=>{S.ld=l;S.upd()};ex.appendChild(b2)});
+ const sb=document.createElement('button');sb.className='s';sb.onclick=()=>{S.on=!S.on;S.upd()};ex.appendChild(sb);
+ S.steps=['Putar selektor ke 40A (arus kecil) atau 400A. Untuk rangkaian sendiri, tambah stop kontak dan beban di sisi kiri lalu sambung dengan kabel.','Ketuk tuas merah untuk membuka rahang, tarik tang hingga rahang melingkari kabel, lalu ketuk lagi untuk menutup.','Jepit satu kabel saja. Jepit kedua urat sekaligus: hasilnya ≈ 0 A.'];
+ S.upd=()=>{const I=S.on?S.ld[0]/(220*S.ld[3]):0,x=D.position.x,z=D.position.z;
+  const w=S.open?'':(Math.abs(x)<.55&&z>-7&&z<-4.8)?'B':(Math.abs(x+1.8)<.55&&z>-2.6&&z<4.2)?'L':(Math.abs(x-1.8)<.55&&z>-2.6&&z<4.2)?'N':'';
+  lab(ll,S.ld[2]+' '+S.ld[1]+(S.on?'':' (mati)'));[...ex.children].forEach((b2,i)=>{b2.classList.toggle('on',i<4&&LD[i]===S.ld);if(i==4)b2.textContent='Saklar beban: '+(S.on?'ON':'OFF')});
+  let rd=w=='L'||w=='N'?I:0,uw=null;if(!S.open&&!w){uw=clWire(D);if(uw)rd=uw.I}let msg;S.cd={v:S.k==1?rd.toFixed(2):rd.toFixed(1)};
+  if(!S.k)msg='Selektor di OFF. Putar ke 40A atau 400A.';
+  else msg=S.open?'Rahang terbuka. Lingkarkan pada kabel lalu ketuk tuas untuk menutup.':w=='B'?'Fasa dan netral terjepit bersamaan: medan magnetnya saling meniadakan, terbaca ≈ 0 A.':uw?(uw.n>1?'Beberapa kabel terjepit: arus neto '+rd.toFixed(2)+' A.':'Terukur '+rd.toFixed(2)+' A pada kabel penghubung.'):w?'Terukur '+rd.toFixed(2)+' A pada kabel '+(w=='L'?'fasa':'netral')+'.':'Rahang tertutup di udara. Buka tuas, lalu lingkarkan pada satu kabel.';
+  draw();S.msg=msg;S.val='Arus beban = '+I.toFixed(2)+' A'}}
+
+/* kabel yang naik tegak dari terminal lalu melengkung di udara; di atas bodi tingginya dikunci agar tidak tenggelam */
+function hiCab(hw=3.8){S.probes.forEach((P,i)=>{P.cm.material.color.set(i?'#4b4f58':'#ff3b30');P.cab=()=>{P.sync();P.g.updateMatrixWorld(true);const jp=P.jp,e=P.g.localToWorld(V3(0,3.2,0)),a=V3(jp.x,jp.y+.9,jp.z),pts=[jp.clone(),a];
+  for(let k=1;k<=7;k++){const t=k/8,p=a.clone().lerp(e,t);p.y=a.y+(e.y-a.y)*t-.8*Math.sin(PI*t);if(p.z<2.1&&Math.abs(p.x)<hw)p.y=Math.max(p.y,1.6);pts.push(p)}
+  pts.push(e);P.cm.geometry.dispose();P.cm.geometry=new T.TubeGeometry(new T.CatmullRomCurve3(pts),72,.1,8)};P.cab()})}
+
+/* ---------- Galvanometer ---------- */
+function buildGV(){S.z=.5;S.zc=.5+(Math.random()<.5?-1:1)*(.12+Math.random()*.12);S.gi=0;S.nf=0;S.nv=0;S.nt=0;S.ls=1e9;S.buzz=0;
+ const W=7.2,D=9.9,BH=1.2,K=512/380,IG=new T.Group;IG.position.set(0,0,-3);SC.add(IG);const uv=(u,v)=>[(u/512-.5)*W,(v/704-.5)*D],P=(r,d)=>{d*=PI/180;return[189+r*Math.sin(d),330-r*Math.cos(d)]};
+ const ln=(g,p,q,w,c)=>{g.strokeStyle=c;g.lineWidth=w;g.beginPath();g.moveTo(p[0],p[1]);g.lineTo(q[0],q[1]);g.stroke()};
+ const A=CT(512,704),a=A.getContext('2d'),B=CT(512,704),b=B.getContext('2d');a.scale(K,K);b.scale(K,K);
+ /* lapisan bawah: bodi, muka, skala -30..30 */
+ rr(a,0,0,380,520,24,'#15161a');rr(a,8,4,364,212,9,'#202127');rr(a,20,14,340,198,5,'#050507');a.strokeStyle='#3b3e47';a.lineWidth=1.5;a.strokeRect(22,16,336,194);
+ const fg=a.createLinearGradient(0,22,0,205);fg.addColorStop(0,'#f4f4ef');fg.addColorStop(1,'#e6e6df');rr(a,28,22,322,183,3,fg);
+ a.strokeStyle='#111';a.lineWidth=9;a.beginPath();a.arc(189,330,240,-2*PI/3,-PI/3);a.stroke();
+ for(let i=0;i<=30;i++){const d=-30+2*i,mj=i%5==0;ln(a,P(250,d),P(mj?264:257,d),mj?1.6:1,'#111')}
+ for(let v=-30;v<=30;v+=10){const[x,y]=P(278,v);tx(a,v,x,y,'14px Arial','#1a1a1a')}
+ /* lapisan atas: kaca, strip buram, panel biru (jarum lewat di antara dua lapisan) */
+ const ig=b.createLinearGradient(0,22,0,38);ig.addColorStop(0,'rgba(0,0,0,.35)');ig.addColorStop(1,'rgba(0,0,0,0)');b.fillStyle=ig;b.fillRect(28,22,322,16);
+ const gg=b.createLinearGradient(28,22,190,150);gg.addColorStop(0,'rgba(255,255,255,.25)');gg.addColorStop(1,'rgba(255,255,255,0)');b.fillStyle=gg;b.beginPath();b.moveTo(28,22);b.lineTo(190,22);b.lineTo(28,150);b.fill();
+ tx(b,'G',189,158,'30px Georgia,serif','#111');tx(b,'Ω',252,193,'13px Arial','#222');ln(b,[262,193],[272,193],1.2,'#222');ln(b,[262,193],[270,186],1.2,'#222');
+ b.fillStyle='#222';b.beginPath();for(let i=0;i<10;i++){const r=i%2?2.2:5,d=i*36*PI/180;b.lineTo(284+r*Math.sin(d),189-r*Math.cos(d))}b.fill();tx(b,'2.5',304,193,'13px Arial','#222');
+ const grid=(p,cx,cy)=>{b.save();b.beginPath();p();b.clip();b.fillStyle='#f2f2f0';b.fillRect(0,0,380,520);b.translate(cx,cy);b.rotate(PI/4);for(let i=-48;i<=48;i++){ln(b,[i*8,-400],[i*8,400],1,'#c9c9c4');ln(b,[-400,i*8],[400,i*8],1,'#c9c9c4')}b.restore()};
+ grid(()=>b.rect(18,205,342,92),189,251);grid(()=>{b.moveTo(145,297);b.lineTo(243,297);b.lineTo(236,322);b.lineTo(152,322);b.closePath()},194,310);
+ ln(b,[18,206.5],[360,206.5],3,'rgba(255,255,255,.6)');
+ [56,322].forEach(x=>{b.fillStyle='#e9e9e6';b.strokeStyle='#bdbdb8';b.lineWidth=2;b.beginPath();b.arc(x,238,7,0,7);b.fill();b.stroke()});
+ const gl=b.createRadialGradient(189,290,0,189,290,44);gl.addColorStop(0,'rgba(232,184,74,.9)');gl.addColorStop(1,'rgba(232,184,74,0)');b.fillStyle=gl;b.beginPath();b.arc(189,290,44,0,7);b.fill();
+ rr(b,38,372,304,92,3,'#1c40ad');b.strokeStyle='#9fb4ee';b.lineWidth=2;b.strokeRect(38,372,304,92);ln(b,[100,398],[176,398],1.5,'#fff');ln(b,[205,398],[282,398],1.5,'#fff');
+ b.fillStyle='#1c40ad';b.strokeStyle='#fff';b.lineWidth=1.5;b.beginPath();b.arc(140,398,10,0,7);b.fill();b.stroke();b.fillRect(232,393,22,10);b.strokeRect(232,393,22,10);ln(b,[135,403],[145,393],1.5,'#fff');
+ tx(b,'100Ω',140,383,'700 13px Arial','#fff');tx(b,'2.4K',243,383,'700 13px Arial','#fff');tx(b,'—',84,450,'700 18px Arial','#fff');tx(b,'G0',187,450,'700 14px Arial','#fff');tx(b,'G1',297,450,'700 14px Arial','#fff');tx(b,'GALVANOMETER',189,352,'600 12px sans-serif','#9aa0ad');
+ const c=CT(512,704);S.g=c.getContext('2d');S.tex=new T.CanvasTexture(c);S.tex.anisotropy=8;
+ mesh(new T.BoxGeometry(W,BH,D),M('#15161a'),IG,0,BH/2,0);const fp=mesh(new T.PlaneGeometry(W,D),M('#fff',{map:S.tex,roughness:.5}),IG,0,BH+.01,0);fp.rotation.x=-PI/2;
+ S.draw=an=>{const g=S.g;g.setTransform(1,0,0,1,0,0);g.drawImage(A,0,0);g.save();g.scale(K,K);g.beginPath();g.rect(28,22,322,183);g.clip();g.translate(189,330);g.rotate(an*PI/180);
+  g.shadowColor='rgba(0,0,0,.3)';g.shadowBlur=2;g.shadowOffsetX=3;g.shadowOffsetY=2;ln(g,[0,0],[0,-266],1.6,'#111');g.restore();g.drawImage(B,0,0);
+  g.strokeStyle='#4cff7a';g.lineWidth=4;g.beginPath();g.arc(S.gi?400:252,536,34,0,7);g.stroke();S.tex.needsUpdate=true};
+ /* terminal: — (hitam), G0 dan G1 (merah). Ketuk G0/G1 untuk memindah probe merah */
+ const[x0,jz]=uv(113,536),[x1]=uv(252,536),[x2]=uv(400,536),jc=jack(IG,x0,BH,jz,'#8a8f98'),ja=jack(IG,x1,BH,jz,'#ff3b30'),jb=jack(IG,x2,BH,jz,'#ff3b30'),jr=ja.clone();
+ [[ja,0],[jb,1]].forEach(([p,i])=>{const m=mesh(new T.CylinderGeometry(.62,.62,.6,16),new T.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}),IG,p.x,BH+.3,p.z+3);m.castShadow=m.receiveShadow=false;m.userData.h={tap(){S.gi=i;jr.copy(i?jb:ja);S.dirty=1;S.upd()}};S.pick.push(m)});
+ const[zx,zz]=uv(255,391),zk=mkKnob(IG,zx,BH,zz,.5,[0],0,()=>{});zk.userData.ta=zk.userData.ca=-135+270*S.z;
+ zk.userData.h={down(){this.z0=S.z},move(t){S.z=cl(this.z0+t/150,0,1);zk.userData.ta=-135+270*S.z;S.upd()}};
+ S.pal=[['Sel 0,05 V',{t:'B',v:.05,n:'Sel 0,05 V'}],['Baterai 1,5 V',{t:'B',v:1.5}],['Baterai 9 V',{t:'B',v:9}],['9 V + R 15 kΩ',{t:'B',v:9,rs:15e3}],['R 4,7 kΩ',{t:'R',v:4700}],['Stop kontak 220 V',{t:'AC',v:220}]];
+ [[0,-5,5],[1,5,5],[3,-4.5,8.3],[4,4.5,8.3],[5,0,6.6]].forEach(q=>addItem(S.pal[q[0]][1],q[1],q[2]));
+ mkProbe('#ff3b30',jr,3,2.8);mkProbe('#222',jc,-3,2.8);
+ hiCab();
+ S.steps=['Seret knob nol di tengah hingga jarum tepat di 0. Setiap kali alat dimulai ulang, posisi nolnya bergeser.','Probe hitam di terminal —. Ketuk terminal merah G0 (100 Ω, peka) atau G1 (ditambah 2,4 kΩ seri, kurang peka) untuk memasang probe merah.','Tarik probe merah ke kutub + dan hitam ke kutub − pada sumber yang sama. Mulai dari G1 agar jarum tidak membentur penahan.'];
+ /* jarum: pegas teredam (kurang redam, jadi melewati lalu kembali), membentur penahan di ±33 */
+ S.frame=dt=>{const f=(S.nt-S.nf)*120-S.nv*9.5;S.nv+=f*dt;S.nf+=S.nv*dt;if(Math.abs(S.nf)>33){S.nf=Math.sign(S.nf)*33;S.nv*=-.4}
+  const sn=S.nf+(S.buzz?Math.sin(performance.now()*.09)*.6:0);if(Math.abs(sn-S.ls)>.004){S.ls=sn;S.draw(sn)}};
+ S.upd=()=>{const[p1,p2]=S.probes.map(p=>p.pin),s=pdist()<.9,ok=p1&&p2&&p1!==p2,Rm=S.gi?2500:100,ze=(S.z-S.zc)*12;let d=0,msg='',val='';S.buzz=0;
+  if(s||(p1&&p1===p2))msg='Kedua probe terhubung singkat. Tarik probe ke dua titik rangkaian.';
+  else if(!ok)msg='Tempelkan probe merah dan hitam pada dua titik rangkaian.';
+  else{const ac=mg(ckAmp(p1,p2,Rm,1)),I=ckAmp(p1,p2,Rm,0)[0];
+   if(ac>2e-3){S.buzz=1;msg='Bahaya: tegangan AC langsung ke galvanometer. Jarum hanya bergetar di nol dan alat bisa rusak.'}
+   else if(Math.abs(I)<1e-9)msg='Tidak ada arus di antara kedua titik. Sambungkan sumber ke rangkaian dengan kabel lalu ukur.';
+   else{d=I*3e4;
+    msg=Math.abs(d)>30?'Arus terlalu besar, jarum membentur penahan. '+(S.gi?'Pakai sumber yang lebih kecil atau tambah hambatan seri dengan kabel.':'Ketuk terminal G1 untuk menambah 2,4 kΩ seri.'):d<0?'Polaritas terbalik, jarum ke kiri. Tukar probe merah dan hitam.':Math.abs(d)<3?'Simpangan kecil'+(S.gi?'. Terminal G0 lebih peka.':'.'):'Baca simpangan jarum pada skala −30 sampai 30.';
+    val='I = '+(I<0?'−':'')+fmt(Math.abs(I),'A')+', simpangan '+d.toFixed(1)+' skala'}}
+  S.nt=cl(d,-45,45)+ze;S.ls=1e9;S.msg=msg;S.val=val}}
+
+/* ---------- Multimeter digital ---------- */
+const DP=[['OFF','',-90],['V','ac',-65],['V','dc',-43],['mV','dc',-20],['Ω','dio',2],['','cap',23],['A','acdc',43],['mA','acdc',67],['µA','acdc',90],['°C','',112]],
+ DU=[['',''],['AC','V'],['DC','V'],['DC','mV'],['','Ω'],['','nF'],['DC','A'],['DC','mA'],['DC','µA'],['','°C']],
+ SGS={a:[5,0,26,7],b:[29,5,7,26],c:[29,35,7,26],d:[5,59,26,7],e:[0,35,7,26],f:[0,5,7,26],g:[5,29.5,26,7]},
+ SGM={'0':'abcdef','1':'bc','2':'abdeg','3':'abcdg','4':'bcfg','5':'acdfg','6':'acdefg','7':'abc','8':'abcdefg','9':'abcdfg','L':'def',' ':''};
+const rv=q=>q.tc==null?q.v:q.v*Math.exp(3950*(1/(q.tc+273.15)-1/298.15)),sc=(x,a)=>x>=1e6?[x/1e6,'M'+a]:x>=1e3?[x/1e3,'k'+a]:[x,a];
+function buildDM(){S.k=0;S.sd=0;S.dv=0;S.tv=0;S.u='';S.md='';S.ol=0;S.on=0;S.t1=0;S.jk=2;S.key='';S.hold=0;
+ const W=5,D=10.1,BH=1.2,K=400/284,IG=new T.Group;IG.position.set(0,0,-3);SC.add(IG);const uv=(u,v)=>[(u/400-.5)*W,(v/808-.5)*D];
+ /* lapisan statis: holster, layar, panel, tombol, teks terminal */
+ const B=CT(400,808),b=B.getContext('2d');b.setTransform(K,0,0,K,-56*K,-18*K);
+ rr(b,68,28,260,552,36,'#c9770a');rr(b,70,30,256,548,34,'#f39a1e');rr(b,100,58,206,136,8,'#37373a');rr(b,106,65,194,120,4,'#8a8e8a');rr(b,108,67,190,116,3,'#cfd3cf');rr(b,100,188,206,352,10,'#2f2f31');
+ [[116,35,'#6f8fe6','HOLD'],[162,37,'#4a4a4d','RANGE'],[209,37,'#4a4a4d','REL'],[256,36,'#4a4a4d','Hz %']].forEach(q=>{rr(b,q[0],214,q[1],24,4,q[2]);tx(b,q[3],q[0]+q[1]/2,230,'700 11px Arial','#f4f4f2')});
+ b.fillStyle='#ffa81c';b.beginPath();b.arc(131,263,15,0,7);b.fill();tx(b,'CONSTANT',291,259,'700 12px Arial','#f4f4f2','right');tx(b,'90F',291,276,'700 12px Arial','#f4f4f2','right');
+ b.fillStyle='rgba(0,0,0,.4)';b.beginPath();b.arc(204,364,63,0,7);b.fill();
+ tx(b,'CE',120,456,'700 17px Arial','#f4f4f2','left');tx(b,'CAT II 1000V',222,446,'italic 700 10px Arial','#f3d21c','left');tx(b,'CAT III 600V',222,458,'italic 700 10px Arial','#f3d21c','left');
+ [['A',131],['µA mA',173],['V Ω °C',215],['COM',277]].forEach(q=>tx(b,q[0],q[1],482,'700 13px Arial','#f4f4f2'));
+ [131,173,215].forEach(x=>{b.fillStyle='#c71f1f';b.beginPath();b.arc(x,509,17,0,7);b.fill()});b.fillStyle='#141414';b.beginPath();b.arc(277,509,17,0,7);b.fill();
+ const c=CT(400,808);S.g=c.getContext('2d');S.tex=new T.CanvasTexture(c);S.tex.anisotropy=8;
+ mesh(new T.BoxGeometry(W,BH,D),M('#c9770a'),IG,0,BH/2,0);const fp=mesh(new T.PlaneGeometry(W,D),M('#fff',{map:S.tex,roughness:.5}),IG,0,BH+.01,0);fp.rotation.x=-PI/2;
+ /* lapisan dinamis: layar tujuh segmen, indikator, label knob (posisi aktif kuning) */
+ S.draw=x=>{const g=S.g;g.setTransform(1,0,0,1,0,0);g.drawImage(B,0,0);g.setTransform(K,0,0,K,-56*K,-18*K);
+  const ink='#1b1c1b',gh='rgba(27,28,27,.08)';
+  if(S.on){g.strokeStyle=ink;g.lineWidth=1.2;g.strokeRect(124,72,30,13);tx(g,'AUTO',139,82,'700 9px Arial',ink);tx(g,S.md,116,106,'700 12px Arial',ink,'left');tx(g,S.u,290,176,'700 14px Arial',ink,'right')}
+  if(S.hold)tx(g,'HOLD',290,82,'700 9px Arial',ink,'right');
+  const ch=[],dp=[];for(const z of x){if(z=='.')dp[dp.length-1]=1;else{ch.push(z);dp.push(0)}}while(ch.length<4){ch.unshift(' ');dp.unshift(0)}
+  if(x&&x!='0L'&&S.dv<-5e-4)rr(g,112,119.6,12,5.6,1,ink);
+  for(let n=0;n<4;n++){g.save();g.translate(128+n*40,96);g.scale(.8,.8);g.transform(1,0,-.105,1,0,0);const on=SGM[ch[n]]||'';for(const k in SGS){const r=SGS[k];rr(g,r[0],r[1],r[2],r[3],2,on.includes(k)?ink:gh)}g.fillStyle=dp[n]?ink:gh;g.beginPath();g.arc(42,64,3.2,0,7);g.fill();g.restore()}
+  const pl=(...p)=>{g.beginPath();g.moveTo(p[0],p[1]);for(let i=2;i<p.length;i+=2)g.lineTo(p[i],p[i+1]);g.stroke()},sn=y=>{g.beginPath();g.moveTo(-5,y);g.quadraticCurveTo(-2.5,y-4,0,y);g.quadraticCurveTo(2.5,y+4,5,y);g.stroke()};
+  DP.forEach((p,i)=>{const t=p[2]*PI/180,x0=202+80*Math.sin(t)-(i?0:2),y0=360-80*Math.cos(t),k=p[1],col=i==S.k?'#ffd23a':'#f4f4f2';
+   if(p[0])tx(g,p[0],x0,y0+5,'700 14px Arial',col);g.save();g.translate(x0,y0);g.strokeStyle=k=='dio'?'#f3d21c':col;g.lineWidth=1.2;g.lineCap='round';
+   if(k=='ac')sn(-13);if(k=='acdc')sn(-18);if(k=='dc'||k=='acdc'){pl(-5,-13,5,-13);pl(-5,-10,-3,-10);pl(-1,-10,1,-10);pl(3,-10,5,-10)}
+   if(k=='dio'){pl(-9,-20,-9,-12,-3,-16,-9,-20);pl(-3,-20,-3,-12);pl(6,-19,9,-16,6,-13)}
+   if(k=='cap'){pl(-10,0,-3,0);pl(-3,-8,-3,8);pl(3,-8,3,8);pl(3,0,10,0)}g.restore()});
+  g.setTransform(1,0,0,1,0,0);g.strokeStyle='#4cff7a';g.lineWidth=4;g.beginPath();g.arc([106,165,224][S.jk],691,32,0,7);g.stroke();S.tex.needsUpdate=true};
+ /* knob, tombol HOLD, terminal */
+ const[kx,kz]=uv(206,481),[hx,hz]=uv(109,293);mkKnob(IG,kx,BH,kz,1.05,DP.map(p=>p[2]),0,i=>{S.k=i;S.sd=1;S.upd()});mkBtn(IG,hx,BH,hz,.62,.42,()=>{S.hold=!S.hold;S.upd()});
+ const[x0,jz]=uv(106,691),[x1]=uv(165,691),[x2]=uv(224,691),[x3]=uv(311,691),JK=[jack(IG,x0,BH,jz,'#ff3b30'),jack(IG,x1,BH,jz,'#ff3b30'),jack(IG,x2,BH,jz,'#ff3b30')],jcm=jack(IG,x3,BH,jz,'#8a8f98'),jr=JK[2].clone();
+ S.pal=[['Sel 0,05 V',{t:'B',v:.05,n:'Sel 0,05 V'}],['Baterai 1,5 V',{t:'B',v:1.5}],['Baterai 9 V',{t:'B',v:9}],['1,5 V + R 220 Ω',{t:'B',v:1.5,rs:220}],['9 V + R 4,7 kΩ',{t:'B',v:9,rs:4700}],['R 220 Ω',{t:'R',v:220}],['R 4,7 kΩ',{t:'R',v:4700}],['R 1 MΩ',{t:'R',v:1e6}],['C 100 nF',{t:'C',v:1e-7}],['C 470 µF',{t:'C',v:4.7e-4}],['Termistor 27 °C',{t:'R',v:1e4,tc:27,n:'Termistor 27 °C'}],['Termistor 85 °C',{t:'R',v:1e4,tc:85,n:'Termistor 85 °C'}],['Stop kontak 220 V',{t:'AC',v:220}]];
+ [[1,-4,5.2],[4,4,5.2],[6,-4.8,8.2],[8,0,8.2],[10,4.8,8.2],[12,0,5.4]].forEach(q=>addItem(S.pal[q[0]][1],q[1],q[2]));
+ mkProbe('#ff3b30',jr,2,2.8);mkProbe('#222',jcm,-2,2.8);hiCab();
+ S.steps=['Putar selektor ke fungsi yang sesuai: V~ untuk stop kontak, V⎓ atau mV untuk baterai, Ω untuk resistor, A/mA/µA untuk arus, °C untuk termistor.','Probe merah otomatis pindah ke terminal yang tepat (V Ω °C, µA mA, atau A) dan diberi cincin hijau. Probe hitam selalu di COM.','Tarik probe ke dua kutub atau dua kaki komponen yang sama. Angka di layar bergerak menuju nilai akhirnya. Tombol HOLD membekukan tampilan.'];
+ /* angka layar mengejar nilai target (seperti ADC yang menstabil) */
+ S.frame=dt=>{if(!S.hold){S.dv+=(S.tv-S.dv)*(1-Math.exp(-dt*7));if(Math.abs(S.tv-S.dv)<1e-3*Math.max(1,Math.abs(S.tv)))S.dv=S.tv}
+  const a=Math.abs(S.dv),d=S.t1?1:a<10?3:a<100?2:a<1000?1:0,x=!S.on?'':S.ol||a>=9999.5?'0L':a.toFixed(d),key=x+S.u+S.md+(S.dv<0)+S.k+S.jk+S.hold;if(key!==S.key){S.key=key;S.draw(x)}};
+ S.upd=()=>{const[p1,p2]=S.probes.map(p=>p.pin),k=S.k,sh0=pdist()<.9||(p1&&p1===p2),ok=p1&&p2&&p1!==p2;
+  let v=0,u=DU[k][1],ol=0,msg='',val='';S.on=k>0;S.t1=k==9;S.jk=k==6?0:(k==7||k==8)?1:2;jr.copy(JK[S.jk]);S.dirty=1;
+  const dcv=()=>ckVolt(p1,p2,0)[0],acv=()=>mg(ckVolt(p1,p2,1));
+  if(!k)msg='Alat OFF. Putar selektor ke fungsi ukur.';
+  else if(!ok&&k!=4)msg=sh0?'Probe terhubung singkat, tidak ada yang diukur.':'Tempelkan probe merah dan hitam pada dua titik rangkaian (kaki komponen atau ujung kabel).';
+  else if(k<4){if(k==1){v=acv();msg=v<.5?'Tidak ada tegangan AC di antara kedua titik. Pakai stop kontak.':'Tegangan AC terukur (nilai efektif).'}
+   else{const x=dcv();v=k==3?x*1e3:x;msg=Math.abs(x)<5e-4?'Tidak ada tegangan DC di antara kedua titik. Pakai baterai atau rangkaian bersumber.':k==3&&Math.abs(v)>600?(ol=1,'Melebihi 600 mV, layar OL. Pindah ke V⎓.'):x<0?'Polaritas terbalik, muncul tanda −. Tukar probe.':'Tegangan DC terukur.'}}
+  else if(k==4){if(!ok){if(sh0)msg='Probe terhubung singkat: 0 Ω.';else{ol=1;msg='Rangkaian terbuka, layar OL. Tempelkan probe pada kaki resistor.'}}
+   else if(Math.max(Math.abs(dcv()),acv())>.3){ol=1;msg='Bahaya: jangan ukur Ω pada rangkaian bertegangan. Lepas sumbernya.'}
+   else{const x=ckZ(p1,p2,0)[0];if(x>1e8){ol=1;msg='Tidak ada jalur DC, layar OL (terbuka atau kapasitor mengisi).'}else{[v,u]=sc(x,'Ω');msg='Resistansi terukur, satuan menyesuaikan otomatis.';val='R = '+sh(x,'Ω')}}}
+  else if(k==5){const z=ckZ(p1,p2,2*PI*1e3);if(z[1]<-1e-6){const c=-1/(2*PI*1e3*z[1]);[v,u]=c<1e-6?[c*1e9,'nF']:[c*1e6,'µF'];msg='Kapasitansi terukur.'}else msg='Tidak ada kapasitor di antara kedua titik.'}
+  else if(k<9){const q=k-6,Rm=[.01,10,1e3][q],lim=[10,.4,.004][q],I=ckAmp(p1,p2,Rm,0)[0],Ia=mg(ckAmp(p1,p2,Rm,1));
+   if(Ia>lim||Math.abs(I)>lim){ol=1;msg=Ia>lim?'Bahaya: arus AC besar lewat meter, sekring putus.':'Arus melebihi batas range (OL). Pasang meter seri dengan beban, jangan langsung di sumber.'}
+   else if(Math.abs(I)<1e-9)msg='Tidak ada arus. Pasang meter seri di rangkaian tertutup (probe di celah antara dua kabel).';
+   else{v=I*[1,1e3,1e6][q];msg=I<0?'Polaritas terbalik, muncul tanda −. Tukar probe.':'Arus terukur. Probe merah ada di terminal '+(q?'µA mA':'A')+'.'}}
+  else{const th=[p1,p2].find(p=>p&&p.it.sp.tc!=null);if(ok&&th){v=th.it.sp.tc;msg='Suhu termistor terbaca langsung dalam °C.'}else{ol=1;msg='Tidak ada sensor suhu. Pasang probe pada termistor.'}}
+  if(S.hold)msg+=' HOLD aktif: tampilan dibekukan.';
+  if(S.sd){S.dv=0;S.sd=0}S.tv=v;S.u=u;S.md=DU[k][0];S.ol=ol;S.key='';S.msg=msg;S.val=val}}
+
+/* ---------- Power meter AC ---------- */
+/* katalog beban rumah tangga: p = daya (W) pada 220 V, pf = faktor daya, x = eksponen daya terhadap tegangan, w = bentuk arus (l: induktif, d: berpulsa) */
+const AP={lamp:{n:'Lampu pijar 40 W',p:40,pf:1,x:1.6,k:'bulb'},led:{n:'Lampu LED 9 W',p:9,pf:.55,x:.1,k:'bulb',w:'d'},fan:{n:'Kipas angin 45 W',p:45,pf:.82,x:1,k:'fan',w:'l'},iron:{n:'Setrika 350 W',p:350,pf:1,x:2,k:'heat'},heat:{n:'Pemanas 1000 W',p:1000,pf:1,x:2,k:'heat'},chg:{n:'Charger laptop 65 W',p:65,pf:.62,x:.1,k:'box',w:'d'}},TARIF=1444.7;
+const dgt=(v,n,md)=>{for(let d=md;d>=0;d--){const t=v.toFixed(d);if(t.replace('.','').length<=n)return t}return'9'.repeat(n)};
+const hms=t=>{t=Math.floor(t);return Math.floor(t/3600)+' j '+Math.floor(t%3600/60)+' mnt '+t%60+' dtk'};
+const PM7=(()=>{const G={a:'12 4 48 4 43 10 17 10',b:'50 6 50 47 45 42 45 12',c:'50 53 50 94 45 88 45 58',d:'12 96 48 96 43 90 17 90',e:'10 53 15 58 15 88 10 94',f:'10 6 15 12 15 42 10 47',g:'12 50 17 45 43 45 48 50 43 55 17 55'},o={};for(const k in G){const n=G[k].split(' ').map(Number),p=new Path2D;p.moveTo(n[0],n[1]);for(let i=2;i<n.length;i+=2)p.lineTo(n[i],n[i+1]);p.closePath();o[k]=p}return o})();
+function d7(g,x,y,h,ch,dp,on,off){const q=h/100,m=SGM[ch]||'';g.save();g.translate(x,y);g.scale(q,q);g.transform(1,0,-.123,1,6.15,0);for(const k in PM7){g.fillStyle=m.includes(k)?on:off;g.fill(PM7[k])}g.fillStyle=dp?on:off;g.beginPath();g.arc(57,94,3.8,0,7);g.fill();g.restore()}
+function r7(g,str,n,x,y,h,on,off){const ch=[],dp=[];for(const z of str){if(z=='.')dp[dp.length-1]=1;else{ch.push(z);dp.push(0)}}while(ch.length<n){ch.unshift(' ');dp.unshift(0)}ch.forEach((c,i)=>d7(g,x+i*h*.68,y,h,c,dp[i],on,off))}
+function glowTex(){if(!glowTex.t){const c=CT(64,64),x=c.getContext('2d'),r=x.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=r;x.fillRect(0,0,64,64);glowTex.t=new T.CanvasTexture(c)}return glowTex.t}
+/* model 3D beban: lampu, kipas, pemanas/setrika, charger; it.an menyimpan bagian yang beranimasi */
+function ldModel(it,a){const g=it.g,m=(geo,c,o,x,y,z)=>mesh(geo,M(c,o),g,x,y,z),an=it.an={k:a.k,lv:0,sp:0,sl:a.x>1},gl=(y,sz,c)=>{const q=new T.Sprite(new T.SpriteMaterial({map:glowTex(),color:c,blending:T.AdditiveBlending,transparent:true,depthWrite:false,opacity:0}));q.position.set(0,y,0);q.scale.set(sz,sz,1);q.raycast=()=>{};g.add(q);an.gl=q;an.gs=sz};
+ if(a.k=='bulb'){m(new T.CylinderGeometry(.35,.4,.55,16),'#9aa0a8',{metalness:.7,roughness:.4},0,.45,0);an.em=m(new T.SphereGeometry(a.x>1?.78:.62,24,16),'#fff3d6',{transparent:true,opacity:.8,emissive:a.x>1?'#ffb040':'#fff2cc',emissiveIntensity:0},0,1.35,0).material;gl(1.35,4.2,a.x>1?0xffb347:0xfff0c8)}
+ else if(a.k=='fan'){m(new T.CylinderGeometry(.9,1,.25,24),'#2a2d33',{},0,.2,0);m(new T.CylinderGeometry(.12,.12,1.5,10),'#3a3f47',{},0,1,0);m(new T.CylinderGeometry(.38,.38,.7,16).rotateX(PI/2),'#4a5160',{},0,1.9,0);
+  const bl=an.bl=new T.Group;bl.position.set(0,1.9,.5);g.add(bl);an.bm=M('#7ec8ff',{transparent:true,opacity:.9});for(let i=0;i<3;i++){const pv=new T.Group,b=new T.Mesh(new T.BoxGeometry(.55,1.15,.04),an.bm);b.position.y=.62;pv.rotation.z=i*2.094;pv.add(b);bl.add(pv)}
+  m(new T.TorusGeometry(1.3,.04,6,32),'#9aa0a8',{metalness:.6},0,1.9,.6)}
+ else if(a.k=='heat'){const bg=a.p>500;m(new T.BoxGeometry(bg?2.8:2.4,bg?1.9:.45,bg?1.1:1.3),bg?'#d8dce2':'#bfc4cc',{roughness:.5},0,bg?.95:.3,0);an.em=m(new T.BoxGeometry(bg?2.2:2.5,bg?1.2:.1,bg?.1:1.35),'#ff6a2a',{emissive:'#ff4a10',emissiveIntensity:0},0,bg?1:.07,bg?.6:0).material;if(!bg)m(new T.TorusGeometry(.6,.14,8,16,PI),'#2a2d33',{},0,.55,0);gl(bg?1:.3,bg?4.4:3.2,0xff6a2a)}
+ else{m(new T.BoxGeometry(1.8,.7,1.1),'#1d2025',{roughness:.5},0,.35,0);an.em=m(new T.SphereGeometry(.09,10,8),'#40ff7a',{emissive:'#20ff60',emissiveIntensity:0},.6,.5,.56).material}}
+/* animasi beban: t = tingkat daya 0..1. Lampu cepat, pemanas lambat (inersia panas), kipas berputar bertahap */
+function ldAnim(an,t,dt){const k=an.k,e=r=>Math.min(1,dt*r);
+ if(k=='fan'){an.sp+=(t*22-an.sp)*e(1.3);an.bl.rotation.z-=an.sp*dt;an.bm.opacity=.9-.55*an.sp/22;return}
+ an.lv+=(t-an.lv)*e(k=='heat'?.7:k=='bulb'&&an.sl?6:14);an.em&&(an.em.emissiveIntensity=an.lv*(k=='heat'?1.6:k=='box'?2:1.5));an.gl&&(an.gl.material.opacity=an.lv*.85,an.gl.scale.setScalar(an.gs*(.75+.25*an.lv)))}
+function buildPM(){S.on=1;S.lt=1;S.spd=60;S.kwh=0;S.te=0;S.dr=0;S.run=0;S.cn={};S.ldp=new Map;S.dom=null;S.sh={V:0,P:0,I:0,PF:0,Hz:0};S.lit=0;S.boot=0;S.tm=9;S.ph=0;S.fa=9;S.key='';
+ const W=8.4,D=6.24,BH=1.2,IG=new T.Group;IG.position.set(0,0,-3);SC.add(IG);const uv=(u,v)=>[(u/700-.5)*W,(v/520-.5)*D];
+ /* lapisan statis: rumah, jendela, bingkai grafik, jack, tombol */
+ const B=CT(700,520),b=B.getContext('2d');rr(b,0,0,700,520,30,'#0e1012');rr(b,6,6,688,508,26,'#1d2126');rr(b,0,214,12,92,5,'#15171a');rr(b,688,214,12,92,5,'#15171a');rr(b,30,20,640,282,14,'#050607');rr(b,30,312,640,92,10,'#0b0e12');
+ b.strokeStyle='#1c2630';b.lineWidth=1;b.beginPath();for(let i=0;i<=4;i++){b.moveTo(44+i*129,324);b.lineTo(44+i*129,392)}b.moveTo(44,358);b.lineTo(560,358);b.stroke();
+ [190,310,430,550].forEach(x=>rr(b,x-56,412,112,34,8,'#15181c'));
+ b.fillStyle='#7a1414';b.beginPath();b.arc(70,470,29,0,7);b.fill();b.fillStyle='#262a30';b.beginPath();b.arc(630,470,29,0,7);b.fill();
+ tx(b,'SUMBER',70,512,'700 14px Arial','#ff8f80');tx(b,'BEBAN',630,512,'700 14px Arial','#c6d0d6');tx(b,'POWER METER AC',350,486,'700 15px Arial','#c6d0d6');tx(b,'80–260 V · 100 A',350,506,'600 12px Arial','#8a949e');
+ const c=CT(700,520);S.g=c.getContext('2d');S.tex=new T.CanvasTexture(c);S.tex.anisotropy=8;
+ mesh(new T.BoxGeometry(W,BH,D),M('#1d2126'),IG,0,BH/2,0);const fp=mesh(new T.PlaneGeometry(W,D),M('#fff',{map:S.tex,roughness:.5}),IG,0,BH+.01,0);fp.rotation.x=-PI/2;
+ /* lapisan dinamis: LCD tujuh segmen (uji segmen saat menyala), grafik V dan I */
+ S.draw=()=>{const g=S.g,lit=S.lit,sh=S.sh,on=lit?'#06233f':'rgba(6,35,63,.05)',off=lit?'rgba(6,35,63,.08)':'rgba(6,35,63,.04)';g.drawImage(B,0,0);
+  const gr=g.createRadialGradient(240,90,10,330,170,420);gr.addColorStop(0,!lit?'#8fa0a8':S.lt?'#8fd3ff':'#5e8aa8');gr.addColorStop(.45,!lit?'#7f9199':S.lt?'#4aa9ec':'#4a7596');gr.addColorStop(1,!lit?'#6f7f87':S.lt?'#2a82cf':'#3b6384');rr(g,42,32,616,258,8,gr);
+  const gg=g.createLinearGradient(42,32,300,200);gg.addColorStop(0,'rgba(255,255,255,.28)');gg.addColorStop(.5,'rgba(255,255,255,0)');g.fillStyle=gg;g.fillRect(42,32,616,258);
+  const ps=[[62,46,4],[372,46,4],[62,126,4],[410,126,3],[62,206,4],[410,206,3]],bt=lit&&S.boot>0,F=[dgt(sh.V,4,1),dgt(sh.P,4,1),dgt(sh.I,3,2),dgt(sh.PF,3,2),dgt(S.kwh,4,3),dgt(sh.Hz,3,1)];
+  ps.forEach((p,i)=>r7(g,bt?'8.8.8.8.'.slice(0,p[2]*2):F[i],p[2],p[0],p[1],56,on,off));
+  [['V',222,100],['W',532,100],['A',222,180],['kWh',222,260],['Hz',532,260]].forEach(u=>tx(g,u[0],u[1],u[2],'700 20px Arial',on,'left'));tx(g,'PF',372,180,'700 20px Arial',on,'left');
+  if(lit){const a=S.dom&&AP[S.dom.sp.a],ia=a?Math.max(.18,Math.min(1,Math.sqrt(sh.I/5))):0,ac=a?Math.acos(Math.min(1,sh.PF||a.pf)):0,deg=Math.round(ac*180/PI);
+   const wv=(col,fn)=>{g.strokeStyle=col;g.lineWidth=2.2;g.beginPath();for(let x=0;x<=516;x+=3){const th=x/516*4*PI-S.ph,y=358-32*fn(th);x?g.lineTo(44+x,y):g.moveTo(44,y)}g.stroke()};
+   wv('#4fc3ff',th=>Math.sin(th));wv('#ffb300',th=>!a?0:a.w=='d'?Math.sign(Math.sin(th))*Math.pow(Math.abs(Math.sin(th)),11)*ia:Math.sin(th-(a.w=='l'?ac:0))*ia);
+   tx(g,'V',580,338,'700 14px Arial','#4fc3ff','left');tx(g,'I',580,356,'700 14px Arial','#ffb300','left');tx(g,a?a.w=='d'?'arus berpulsa':a.w=='l'?'I tertinggal '+deg+'°':'sefase':'tanpa beban',580,380,'600 11px Arial','#9fb0c0','left')}
+  else tx(g,'TANPA SINYAL',302,362,'700 14px Arial','#33414f');
+  [['SAKLAR '+(S.on?'ON':'OFF'),190],['LAMPU '+(S.lt?'ON':'OFF'),310],['RESET kWh',430],['WAKTU '+S.spd+'×',550]].forEach(q=>tx(g,q[0],q[1],462,'700 12px Arial','#c6d0d6'));S.tex.needsUpdate=true};
+ /* tombol 3D: saklar stop kontak, lampu latar, reset kWh, kecepatan waktu */
+ [[190,()=>{S.on=!S.on;S.upd()}],[310,()=>{S.lt=!S.lt;S.key=''}],[430,()=>{S.kwh=0;S.te=0;S.key=''}],[550,()=>{S.spd=[1,60,600,3600][([1,60,600,3600].indexOf(S.spd)+1)%4];S.key=''}]].forEach(q=>{const[x,z]=uv(q[0],429);mkBtn(IG,x,BH,z,1.2,.4,q[1])});
+ const[x1,jz]=uv(70,470),[x2]=uv(630,470),jr=jack(IG,x1,BH,jz,'#ff3b30'),jk=jack(IG,x2,BH,jz,'#8a8f98');
+ S.pal=[['Stop kontak 220 V',{t:'AC',v:220}],['Lampu pijar 40 W',{t:'LD',a:'lamp'}],['Lampu LED 9 W',{t:'LD',a:'led'}],['Kipas angin 45 W',{t:'LD',a:'fan'}],['Setrika 350 W',{t:'LD',a:'iron'}],['Pemanas 1000 W',{t:'LD',a:'heat'}],['Charger laptop 65 W',{t:'LD',a:'chg'}]];
+ [[0,-6,5.4],[1,-2.2,5.4],[3,2.4,5.4],[5,6.6,5.4],[2,-5,8.8],[6,0,8.8],[4,5,8.8]].forEach(q=>addItem(S.pal[q[0]][1],q[1],q[2]));
+ mkProbe('#ff3b30',jr,-3,2.8);mkProbe('#222',jk,3,2.8);hiCab(4.6);
+ S.steps=['Cara cepat: probe merah di stop kontak, probe hitam di kaki beban (tanpa kabel). Cara nyata: sambungkan netral stop kontak ke netral beban dengan kabel, lalu pasang meter seri di jalur fasa (merah di fasa stop kontak, hitam di fasa beban). Beberapa beban bisa diparalel dengan kabel.','Coba beban berbeda dan bandingkan W, A, dan PF. Beban resistif (lampu pijar, setrika, pemanas) PF ≈ 1; motor dan elektronik PF lebih rendah. Grafik biru = tegangan, kuning = arus.','Ketuk WAKTU untuk mempercepat simulasi (1× sampai 3600×) dan lihat kWh bertambah. Ketuk RESET kWh untuk mengulang, dan SAKLAR untuk memutus tegangan.'];
+ const other=p=>p.it.pins.find(x=>x!==p),MG={lamp:'Lampu pijar: beban resistif, arus sefase dengan tegangan dan PF mendekati 1.',led:'Lampu LED: PF rendah karena arus berbentuk pulsa pendek (distorsi), bukan karena beda fasa.',fan:'Kipas: motor induktif. Arus start besar lalu turun saat berputar; PF di bawah 1 dan arus tertinggal dari tegangan.',iron:'Setrika: beban resistif, W = V × A dan PF mendekati 1.',heat:'Pemanas: beban resistif berdaya besar. Perhatikan tegangan turun sedikit akibat arus besar.',chg:'Charger: catu daya switching tanpa PFC, PF rendah karena arus berpulsa.'};
+ /* meter = hambatan seri 10 mΩ antara dua probe; V diukur antara probe merah dan kaki lain komponennya; daya = Re(V·I*) */
+ const calc=()=>{const q=S.cn,z={V:0,P:0,I:0,PF:0,Hz:0};S.ldp=new Map;S.dom=null;if(!q.pa||!S.on||(q.pb&&q.pa.it===q.pb.it))return z;
+  S.gadd=1.6+(S.dr=(S.dr+(Math.random()-.5)*.6)*.92)+(Math.random()-.5)*.2;
+  const r=ckRun({w:W50,adds:q.pb?[[q.pa,q.pb,100,0]]:[],virt:q.virt}),Vz=cd(r,q.pa,q.po),V=mg(Vz);if(V<5)return z;
+  let I=0,P=0,PF=0;if(q.pb){const Im=cd(r,q.pa,q.pb).map(x=>x*100);I=mg(Im);P=Math.abs(Vz[0]*Im[0]+Vz[1]*Im[1]);PF=I>1e-4?Math.min(1,P/(V*I)):0}
+  S.items.forEach(i=>{if(i.sp.t!='LD')return;const d=cd(r,i.pins[0],i.pins[1]),zz=ldZ(i.sp,i.rt==null?99:i.rt),pl=(d[0]*d[0]+d[1]*d[1])*zz[0]/(zz[0]*zz[0]+zz[1]*zz[1]);S.ldp.set(i,pl);if(!S.dom||pl>S.ldp.get(S.dom))S.dom=i});
+  if(S.dom&&S.ldp.get(S.dom)<.3)S.dom=null;
+  return{V,P:P*(1+(Math.random()-.5)*.006),I,PF:PF?Math.min(1,PF+(Math.random()-.5)*.01):0,Hz:50+(Math.random()-.5)*.12-P/2e4}};
+ const vtxt=()=>{const h=S.sh,e=h.V*h.I,Q=Math.sqrt(Math.max(0,e*e-h.P*h.P));return 'S = '+e.toFixed(1)+' VA · Q = '+Q.toFixed(1)+' var · φ = '+(h.PF?Math.round(Math.acos(h.PF)*180/PI):0)+'° · waktu simulasi '+hms(S.te)+' · biaya ≈ Rp '+Math.round(S.kwh*TARIF).toLocaleString('id-ID')+' (tarif asumsi Rp 1.444,70/kWh)'};
+ S.frame=dt=>{const lit=S.sh.V>80&&!!S.on;if(lit!==!!S.lit){S.lit=lit;if(lit)S.boot=.9}
+  S.ph+=dt*6;S.boot=Math.max(0,S.boot-dt);S.tm+=dt;S.fa+=dt;S.items.forEach(i=>{if(i.sp.t=='LD')i.rt=(S.ldp.get(i)||0)>.5?(i.rt||0)+dt:0});
+  if(S.tm>=.5){S.tm=0;S.sh=calc();S.val=vtxt();const v=$('#val');if(v)v.textContent=S.val}
+  if(S.lit&&S.sh.P>.05){S.kwh=Math.min(99999,S.kwh+S.sh.P*dt*S.spd/3.6e6);S.te+=dt*S.spd}
+  S.items.forEach(it=>it.an&&ldAnim(it.an,S.lit?Math.min(1,(S.ldp.get(it)||0)/AP[it.sp.a].p):0,dt));
+  if(S.fa>=.033){S.fa=0;const k=S.lit?1:'x'+S.lt+S.on+S.kwh+S.spd;if(S.lit||k!==S.key){S.key=k;S.draw()}}};
+ S.upd=()=>{const A=S.probes.map(p=>p.pin),r0=A[0],k0=A[1],n=A.filter(Boolean).length;let pa=null,pb=null,virt=[];
+  if(r0&&k0&&r0!==k0){pa=r0;pb=k0;if(k0.it.sp.t=='AC'&&r0.it.sp.t!='AC'){pa=k0;pb=r0}}else if(n==1){const p=r0||k0;if(p.it.sp.t=='AC')pa=p}
+  if(pa&&pb&&!S.wires.length&&pa.it.sp.t=='AC'&&pb.it.sp.t=='LD')virt=[[other(pa),other(pb)]];
+  S.cn={pa,pb,po:pa&&other(pa),virt,n};S.aoff=!S.on;S.tm=9;const R=S.sh=calc(),on=R.V>80&&S.on;let msg;
+  if(!n)msg='Pasang probe merah dan hitam pada dua titik rangkaian: meter dipasang seri di jalur fasa. Sambung stop kontak ke beban dengan kabel.';
+  else if(r0&&r0===k0)msg='Kedua probe di kaki yang sama: tidak ada yang diukur.';
+  else if(!pa)msg='Probe merah dan hitam harus dipasang pada dua titik rangkaian (salah satunya di stop kontak).';
+  else if(pb&&pa.it===pb.it)msg='Kedua probe di komponen yang sama: pasang meter seri di jalur fasa antara stop kontak dan beban.';
+  else if(!S.on)msg='Saklar stop kontak OFF: tidak ada tegangan, layar padam.';
+  else if(!on)msg='Tegangan di meter di bawah 80 V: sambungkan stop kontak ke meter, lalu nyalakan saklar.';
+  else if(!pb)msg='Meter menyala dari stop kontak, tetapi probe kedua belum terpasang: 0 W.';
+  else if(R.I<1e-3)msg=S.wires.length?'Meter menyala tetapi arus 0 A: rangkaian belum tertutup. Meter harus seri di jalur fasa, dan kabel netral (N) menyambung stop kontak ke beban.':'Meter menyala dari stop kontak, tetapi beban belum terpasang: 0 W.';
+  else{const na=[...S.ldp.values()].filter(x=>x>.3).length;msg=(na>1?'Beban paralel ('+na+' alat): daya dan arus dijumlahkan. ':'')+(S.dom?MG[S.dom.sp.a]:'')}
+  S.msg=msg;S.val=vtxt()}}
+
+/* ---------- scene + UI ---------- */
+const NM={mm:['Multimeter analog',buildMM,{th:0,ph:.95,d:19,y:0,z:0}],lcr:['LCR meter',buildLCR,{th:0,ph:.95,d:19,y:0,z:0}],cl:['Tang ampere',buildCL,{th:.6,ph:1.12,d:21,y:2,z:-1}],gv:['Galvanometer',buildGV,{th:0,ph:.95,d:20,y:0,z:0}],dm:['Multimeter digital',buildDM,{th:0,ph:.95,d:22,y:0,z:0}],pm:['Power meter AC',buildPM,{th:0,ph:.95,d:21,y:0,z:0}]};
+function view(v){const q=NM[cur][2],k=cv.clientWidth/cv.clientHeight<.8?1.5:1;cam.go={th:q.th,ph:v=='t'?.2:v=='f'?1.38:q.ph,d:q.d*k,y:q.y,z:q.z}}
+function size(){const w=$('#stage').clientWidth,h=$('#stage').clientHeight;if(!w||!h)return;R.setSize(w,h,false);CAM.aspect=w/h;CAM.updateProjectionMatrix()}
+function open(m){cur=m;S={items:[],probes:[],pick:[],knobs:[],wires:[],wm:0,wa:null,upd(){},sel:null};$('#wb').classList.remove('on');SC=new T.Scene;SC.background=new T.Color(dark?'#0f1b20':'#d6e6ef');
+ SC.add(new T.HemisphereLight(0xffffff,0x6a7f8c,.75));const dl=new T.DirectionalLight(0xffffff,.85);dl.position.set(6,16,10);dl.castShadow=true;dl.shadow.mapSize.set(1024,1024);Object.assign(dl.shadow.camera,{left:-16,right:16,top:16,bottom:-16,far:50});SC.add(dl);
+ const gc=CT(256,256),gx=gc.getContext('2d');gx.fillStyle=dark?'#14252c':'#eaf2f7';gx.fillRect(0,0,256,256);gx.strokeStyle=dark?'#2d4955':'#a9c4d6';gx.lineWidth=3;gx.strokeRect(0,0,256,256);gx.lineWidth=1;gx.beginPath();[64,128,192].forEach(v=>{gx.moveTo(v,0);gx.lineTo(v,256);gx.moveTo(0,v);gx.lineTo(256,v)});gx.stroke();
+ const gt=new T.CanvasTexture(gc);gt.wrapS=gt.wrapT=T.RepeatWrapping;gt.repeat.set(24,24);gt.anisotropy=4;const fl=mesh(new T.PlaneGeometry(48,48),new T.MeshStandardMaterial({map:gt,roughness:.9}),SC,0,0,0);fl.rotation.x=-PI/2;fl.castShadow=false;
+ $('#home').hidden=true;$('#simv').hidden=false;size();setSel(null);
+ NM[m][1]();const u=S.upd;S.upd=()=>{u();S.items.forEach(it=>it.pins.forEach(p=>{const on=S.probes.some(q=>q.pin===p),wc=S.wires.some(w=>w.a===p||w.b===p),pe=S.wa===p;p.mt.color.set(on?'#4cff7a':pe?'#ffffff':wc?'#5ac8fa':'#ffd54a');p.mt.emissive.set(on?'#0a8a30':pe?'#888':wc?'#0a5a8a':'#a07a00')}));$('#msg').textContent=(S.wm?(S.wa?'Kabel: ketuk kaki tujuan. ':'Kabel: ketuk kaki komponen pertama. '):'')+(S.msg||'');$('#val').textContent=S.val||''};
+ $('#ttl').textContent=NM[m][0];$('#steps').innerHTML=S.steps.concat(['Kabel penghubung: tekan tombol Kabel, lalu ketuk dua kaki komponen untuk menyambungnya. Susun seri atau paralel, lalu ukur dengan probe. Ketuk sebuah kabel dan tekan Hapus untuk melepasnya.']).map(s=>'<li>'+s+'</li>').join('');
+ $('#pal').innerHTML='';S.pal.forEach(p=>{const b=document.createElement('button');b.className='s';b.textContent='+ '+p[0];b.onclick=()=>{if(S.items.length<14){const q=(S.spw||(()=>[(Math.random()-.5)*10,5+Math.random()*4.5]))();addItem(p[1],q[0],q[1])}S.upd()};$('#pal').appendChild(b)});
+ const q=NM[m][2],k=cv.clientWidth/cv.clientHeight<.8?1.5:1;Object.assign(cam,{th:q.th,ph:q.ph,d:q.d*k,go:null});cam.t.set(0,q.y,q.z);SC.updateMatrixWorld(true);S.probes.forEach(p=>p.cab());S.upd();window.scrollTo(0,0)}
+function loop(t){requestAnimationFrame(loop);if(!S||$('#simv').hidden)return;const dt=Math.min((t-last)/1000||.016,.033);last=t;
+ S.knobs.forEach(k=>{const u=k.userData;u.ca+=(u.ta-u.ca)*.3;u.rot.rotation.y=-u.ca*PI/180});S.frame&&S.frame(dt);
+ if(S.dirty){S.probes.forEach(p=>p.cab());S.dirty=0}
+ if(cam.go){const g=cam.go;cam.th+=(g.th-cam.th)*.12;cam.ph+=(g.ph-cam.ph)*.12;cam.d+=(g.d-cam.d)*.12;cam.t.y+=(g.y-cam.t.y)*.12;cam.t.z+=(g.z-cam.t.z)*.12}
+ CAM.position.set(cam.t.x+cam.d*Math.sin(cam.ph)*Math.sin(cam.th),cam.t.y+cam.d*Math.cos(cam.ph),cam.t.z+cam.d*Math.sin(cam.ph)*Math.cos(cam.th));CAM.lookAt(cam.t);R.render(SC,CAM)}
+requestAnimationFrame(loop);addEventListener('resize',size);
+document.querySelectorAll('.card').forEach(b=>b.onclick=()=>b.dataset.m==='mg'?openMegger():b.dataset.m==='lx'?openLux():open(b.dataset.m));
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>view(b.dataset.v));
+$('#back').onclick=()=>{$('#simv').hidden=true;$('#home').hidden=false};$('#rst').onclick=()=>open(cur);$('#wb').onclick=()=>{S.wm=!S.wm;S.wa=null;$('#wb').classList.toggle('on',S.wm);S.upd()};$('#del').onclick=delSel;
+$('#cb').onchange=e=>$('#val').hidden=!e.target.checked;
+</script><script>
+/* ---------- Megger: aset SVG 2D (insulation tester MY10 + kabel LINE/EARTH) ---------- */
+(function(){
+  var NS='http://www.w3.org/2000/svg', CX=180, CY=210, A0=-43.2, SPAN=86.4;
+  var $=function(i){return document.getElementById(i)};
+  var needle=$('mg-needle'), gS=$('mg-scales'), face=$('mg-face'), btn=$('mg-btn'), slide=$('mg-slide'), readEl=$('mg-read'), svg=$('mg-my10');
+
+  // Peta skala MΩ: [nilai, posisi 0..1 dari kiri (∞) ke kanan (0)]
+  var MP=[[0,1],[0.1,.94],[0.2,.87],[0.5,.76],[1,.67],[2,.58],[5,.46],[10,.36],[20,.27],[50,.16],[100,.08],[1000,0]];
+  var LAB=[['∞',0],['100',.08],['50',.16],['20',.27],['10',.36],['5',.46],['2',.58],['1',.67],['0.5',.76],['0.2',.87],['0.1',.94],['0',1]];
+  var BATT_ANGLE=17;
+
+  function fracOf(v){
+    if(v>=1000)return 0; if(v<=0)return 1;
+    for(var i=0;i<MP.length-1;i++){var a=MP[i],b=MP[i+1];
+      if(v>=a[0]&&v<=b[0]){
+        var t=i===0?(v-a[0])/(b[0]-a[0]):(Math.log(v)-Math.log(a[0]))/(Math.log(b[0])-Math.log(a[0]));
+        return a[1]+(b[1]-a[1])*t;
+      }}
+    return 0;
+  }
+  function valOf(f){
+    f=Math.max(0,Math.min(1,f)); if(f<=0.012)return Infinity;
+    for(var i=0;i<MP.length-1;i++){var a=MP[i],b=MP[i+1];
+      if(f<=a[1]&&f>=b[1]){
+        var t=(f-a[1])/(b[1]-a[1]);
+        return i===0?a[0]+(b[0]-a[0])*t:Math.exp(Math.log(a[0])+(Math.log(b[0])-Math.log(a[0]))*t);
+      }}
+    return 0;
+  }
+  function fmt(v){return v===Infinity?'∞':(v>=10?v.toFixed(0):v>=1?v.toFixed(1):v.toFixed(2))}
+
+  // ---------- gambar skala ----------
+  function P(r,deg){var t=deg*Math.PI/180;return [CX+r*Math.sin(t),CY-r*Math.cos(t)]}
+  function el(n,at,p){var e=document.createElementNS(NS,n);for(var k in at)e.setAttribute(k,at[k]);if(p)p.appendChild(e);return e}
+  function arc(r,a0,a1,at){var p0=P(r,a0),p1=P(r,a1);return el('path',Object.assign({d:'M'+p0[0]+' '+p0[1]+' A'+r+' '+r+' 0 0 1 '+p1[0]+' '+p1[1],fill:'none'},at),gS)}
+  function tick(r0,r1,deg,w){var a=P(r0,deg),b=P(r1,deg);el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:'#1d1d1b','stroke-width':w,'stroke-linecap':'round'},gS)}
+
+  // skala MΩ (busur luar)
+  arc(147,A0,A0+SPAN,{stroke:'#1d1d1b','stroke-width':1.4});
+  for(var i=0;i<LAB.length;i++){
+    var a=A0+LAB[i][1]*SPAN; tick(147,137,a,1.7);
+    var p=P(158,a), t=el('text',{x:p[0],y:p[1]+3.5,'class':'sc','text-anchor':'middle'},gS); t.textContent=LAB[i][0];
+    if(i<LAB.length-1){var n=LAB[i+1][1]; for(var k=1;k<4;k++)tick(147,142,a+(LAB[i][1]+(n-LAB[i][1])*k/4-LAB[i][1])*SPAN,.8);}
+  }
+  // skala tegangan (busur dalam): 100 V = -26°, 500 V = +40.5°
+  function vAng(v){return -26+(v-100)*(66.5/400)}
+  arc(108,vAng(100),vAng(500),{stroke:'#1d1d1b','stroke-width':1.1});
+  for(var v=100;v<=500;v+=50){
+    var major=v%100===0; tick(108,major?100:103,vAng(v),major?1.4:.8);
+    if(major){var q=P(92,vAng(v)), tx=el('text',{x:q[0],y:q[1]+3,'class':'sv','text-anchor':'middle'},gS); tx.textContent=v;}
+  }
+  var vu=P(92,vAng(500)); var vt=el('text',{x:vu[0]+14,y:vu[1]+10,'class':'sv'},gS); vt.textContent='V';
+  // pita BATT
+  arc(60,4,30,{stroke:'#2a8a3a','stroke-width':4,'stroke-linecap':'butt'});
+  var bt=el('text',{x:175,y:159,'class':'sv','text-anchor':'end'},gS); bt.textContent='BATT';
+
+  // ---------- logika jarum ----------
+  var ang=-44, saved=-44, batt=false;
+  function apply(a,silent,tt){
+    ang=a; needle.style.transform='rotate('+a+'deg)';
+    var f=(a-A0)/SPAN, v=valOf(f), txt=batt?'Baterai: baik':(tt||fmt(v)+' MΩ');
+    readEl.textContent=txt;
+    if(!batt)slide.value=Math.round(Math.max(0,Math.min(1,f))*1000);
+    if(!silent)document.dispatchEvent(new CustomEvent('my10:change',{detail:{megohm:v,text:txt,batt:batt}}));
+  }
+  function setMegohm(v){batt=false;apply(A0+fracOf(v)*SPAN,false,v>=1000?'∞ MΩ':v>=100?'> 100 MΩ':null)}
+  function battCheck(on){
+    if(on&&!batt){saved=ang;batt=true;btn.classList.add('down');apply(BATT_ANGLE)}
+    else if(!on&&batt){batt=false;btn.classList.remove('down');apply(saved)}
+  }
+
+  // seret di area skala
+  var drag=false;
+  function fromEvent(e){
+    var m=svg.getScreenCTM().inverse(), p=svg.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; p=p.matrixTransform(m);
+    var a=Math.atan2(p.x-CX,-(p.y-CY))*180/Math.PI;
+    batt=false; btn.classList.remove('down'); apply(Math.max(-44,Math.min(A0+SPAN+1.5,a)));
+  }
+  face.addEventListener('pointerdown',function(e){drag=true;needle.classList.add('drag');face.classList.add('drag');face.setPointerCapture(e.pointerId);fromEvent(e)});
+  face.addEventListener('pointermove',function(e){if(drag)fromEvent(e)});
+  var up=function(){drag=false;needle.classList.remove('drag');face.classList.remove('drag')};
+  face.addEventListener('pointerup',up); face.addEventListener('pointercancel',up);
+
+  // tombol BATT CHECK (tahan)
+  btn.addEventListener('pointerdown',function(e){btn.setPointerCapture(e.pointerId);battCheck(true);e.preventDefault()});
+  btn.addEventListener('pointerup',function(){battCheck(false)});
+  btn.addEventListener('pointercancel',function(){battCheck(false)});
+  btn.addEventListener('keydown',function(e){if((e.key===' '||e.key==='Enter')&&!e.repeat){battCheck(true);e.preventDefault()}});
+  btn.addEventListener('keyup',function(e){if(e.key===' '||e.key==='Enter')battCheck(false)});
+
+  slide.addEventListener('input',function(){batt=false;btn.classList.remove('down');apply(A0+(slide.value/1000)*SPAN)});
+
+  // ---------- kabel LINE & EARTH ----------
+  var LL=460, ATT=66, MAXD=LL+ATT-6, X0=-228, X1=348, Y0=16, Y1=548, TX=13;
+  var LC={
+    earth:{name:'EARTH',cable:'#232326',hl:'#8d8d95',boot:'url(#mg-bootBlack)',edge:'#050506',ty:84, tip:[-200,196]},
+    line: {name:'LINE', cable:'#d93025',hl:'#ff9d93',boot:'url(#mg-bootRed)',  edge:'#8e130d',ty:136,tip:[-140,262]}
+  };
+  var LS={}, touching=false;
+  var TEETH='M0,-5.5 L24,-4 L27.5,-2.5 L27.5,-.4 L25,-1.6 L22.5,-.4 L20,-1.6 L17.5,-.4 L15,-1.6 L12.5,-.4 L10,-1.6 L7.5,-.4 L5,-1.6 L0,-1 Z';
+  function clipMarkup(c){return ''+
+    '<g transform="translate(-26 0)">'+
+      '<g class="jawL"><g transform="scale(1 -1)"><path d="'+TEETH+'" fill="url(#mg-metal)" stroke="#6b7076" stroke-width=".6" stroke-linejoin="round"/></g></g>'+
+      '<g class="jawU"><path d="'+TEETH+'" fill="url(#mg-metal)" stroke="#6b7076" stroke-width=".6" stroke-linejoin="round"/></g>'+
+      '<circle r="1.6" fill="#555b61"/>'+
+    '</g>'+
+    '<rect x="-31" y="-6.5" width="9" height="13" rx="2.5" fill="url(#mg-metal)" stroke="#6b7076" stroke-width=".6"/>'+
+    '<path class="boot" d="M-24,-9.5 C-30,-12 -40,-12.5 -46,-10.5 C-52,-8.5 -58,-6 -64,-5 L-64,5 C-58,6 -52,8.5 -46,10.5 C-40,12.5 -30,12 -24,9.5 Z" fill="'+c.boot+'" stroke="'+c.edge+'" stroke-width="1.2" stroke-linejoin="round"/>'+
+    '<path d="M-64,-3.6 L-68,-3.6 L-68,3.6 L-64,3.6 Z" fill="'+c.boot+'" stroke="'+c.edge+'" stroke-width="1"/>'+
+    '<g stroke="#000" stroke-opacity=".22" stroke-width="1" fill="none"><path d="M-33,-9.8 V9.8 M-38,-10.6 V10.6 M-43,-10.2 V10.2"/></g>'+
+    '<path d="M-27,-8 C-34,-10.4 -44,-10.6 -52,-8" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="1.8" stroke-linecap="round"/>';
+  }
+  function nrm(x,y,fb){var d=Math.hypot(x,y);return d>0.001?{x:x/d,y:y/d}:fb}
+  function cl(v,a,b){return Math.max(a,Math.min(b,v))}
+  function ptr(e){var q=svg.createSVGPoint();q.x=e.clientX;q.y=e.clientY;return q.matrixTransform(svg.getScreenCTM().inverse())}
+
+  function layout(s){
+    var A=s.A, tip=s.tip, u=nrm(tip.x-A.x,tip.y-A.y,{x:-1,y:0}), b, c1, c2;
+    for(var i=0;i<3;i++){
+      b={x:tip.x-ATT*u.x,y:tip.y-ATT*u.y};
+      var vx=b.x-A.x, vy=b.y-A.y, d=Math.hypot(vx,vy), slack=Math.max(0,LL-d);
+      var sag=Math.min(Math.sqrt(3*Math.max(d,80)*slack/8),190), h=sag/0.75, stub=Math.min(60,d*.35)*Math.min(1,slack/60);
+      c1={x:A.x-stub,y:A.y+h*.9}; c2={x:b.x-vx*.3,y:b.y-vy*.3+h};   // kabel menjuntai ke bawah (gravitasi)
+      u=nrm(b.x-c2.x,b.y-c2.y,u);
+    }
+    var dd='M'+A.x+' '+A.y+' C'+c1.x.toFixed(1)+' '+c1.y.toFixed(1)+' '+c2.x.toFixed(1)+' '+c2.y.toFixed(1)+' '+b.x.toFixed(1)+' '+b.y.toFixed(1);
+    s.base.setAttribute('d',dd); s.hl.setAttribute('d',dd); s.hit.setAttribute('d',dd);
+    s.clip.setAttribute('transform','translate('+tip.x.toFixed(1)+' '+tip.y.toFixed(1)+') rotate('+(Math.atan2(u.y,u.x)*180/Math.PI).toFixed(1)+')');
+  }
+  // ---------- sampel alat listrik & logika pengukuran ----------
+  var smp='iron', cond='baik', condHid=false, TERM=[], lastKey='';
+  var SMP={                      // tahanan isolasi L-E (MΩ) menurut kondisi; N-E dibuat 18% lebih tinggi
+    iron:  {n:'Setrika listrik 1000 W',        R:{baik:850,lembap:3.2,bocor:0.18}},
+    cooker:{n:'Rice cooker 450 W',             R:{baik:620,lembap:4.5,bocor:0.35}},
+    motor: {n:'Motor induksi 1 fasa ¼ HP',     R:{baik:480,lembap:1.6,bocor:0.06}}
+  };
+  var WIRE={L:'#8a5a2b',N:'#2f6fc4',E:'#6fae2f'}, TLAB={L:'L · Fasa',N:'N · Netral',E:'E · Bodi'}, TPOS={L:-10,N:70,E:150}, TY=508;
+  function art(n){
+    if(n==='iron')return '<path d="M-28 456 H188 Q214 456 206 424 Q196 392 160 384 H18 Q-18 384 -28 424 Z" fill="#4f86c6" stroke="#2c5a8f" stroke-width="2"/>'+
+      '<path d="M34 386 Q40 338 92 338 H132 Q158 342 160 386" fill="none" stroke="#2b2c2f" stroke-width="12" stroke-linecap="round"/>'+
+      '<rect x="-34" y="456" width="244" height="9" rx="4" fill="#c3c8cd" stroke="#8a9096"/><circle cx="170" cy="414" r="9" fill="#e8e8e4" stroke="#888"/><path d="M-4 418 H110" stroke="#fff" stroke-opacity=".3" stroke-width="3"/>';
+    if(n==='cooker')return '<path d="M-6 372 Q70 300 146 372 Z" fill="#d9dde1" stroke="#9aa0a6" stroke-width="2"/><circle cx="70" cy="330" r="5" fill="#8a9096"/>'+
+      '<rect x="-18" y="372" width="176" height="92" rx="14" fill="#f1ede1" stroke="#b9b39f" stroke-width="2"/>'+
+      '<rect x="-30" y="400" width="14" height="30" rx="5" fill="#2b2c2f"/><rect x="144" y="400" width="14" height="30" rx="5" fill="#2b2c2f"/>'+
+      '<rect x="48" y="424" width="44" height="16" rx="5" fill="#d33a2c"/><text x="70" y="436" text-anchor="middle" font-size="8" font-weight="700" fill="#fff" font-family="Arial,sans-serif">COOK</text>';
+    var f='';for(var i=0;i<8;i++)f+='M'+(-12+i*22)+' 356 V440 ';
+    return '<rect x="-30" y="352" width="188" height="92" rx="12" fill="#3d6f9b" stroke="#264a6a" stroke-width="2"/><path d="'+f+'" stroke="#264a6a" stroke-width="3"/>'+
+      '<ellipse cx="-30" cy="398" rx="10" ry="46" fill="#2f5a80" stroke="#264a6a" stroke-width="2"/><rect x="158" y="388" width="34" height="20" rx="3" fill="#b9bec4" stroke="#7d8389"/>'+
+      '<rect x="38" y="326" width="54" height="26" rx="4" fill="#2b2c2f"/><rect x="104" y="318" width="38" height="34" rx="8" fill="#1f4e8c" stroke="#16365f"/>'+
+      '<text x="123" y="340" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Arial,sans-serif">C</text><rect x="-22" y="444" width="170" height="14" rx="3" fill="#2b2c2f"/>';
+  }
+  function drawSample(){
+    var h='<rect x="-236" y="296" width="584" height="256" rx="14" style="fill:var(--card);stroke:var(--bd)" stroke-width="1.5"/>'+
+      '<text x="-226" y="312" font-size="9" font-weight="700" font-family="Arial,sans-serif" style="fill:var(--mut)">MEJA UJI · SAMPEL</text>'+
+      '<text x="70" y="316" text-anchor="middle" font-size="13" font-weight="700" font-family="Arial,sans-serif" style="fill:var(--fg)">'+SMP[smp].n+'</text>'+art(smp);
+    ['L','N','E'].forEach(function(k){
+      h+='<path d="M'+TPOS[k]+' '+(TY-11)+' V466" stroke="'+WIRE[k]+'" stroke-width="3.5" fill="none"/>'+
+        '<circle data-r="'+k+'" cx="'+TPOS[k]+'" cy="'+TY+'" r="16" fill="none" stroke="#2ecc71" stroke-width="3" opacity="0"/>'+
+        '<circle cx="'+TPOS[k]+'" cy="'+TY+'" r="11" fill="'+WIRE[k]+'" stroke="#222" stroke-width="1.5"/><circle cx="'+TPOS[k]+'" cy="'+TY+'" r="5.5" fill="url(#mg-metal)"/>'+
+        '<text x="'+TPOS[k]+'" y="'+(TY+30)+'" text-anchor="middle" font-size="11" font-weight="700" font-family="Arial,sans-serif" style="fill:var(--fg)">'+TLAB[k]+'</text>';
+    });
+    var g=document.getElementById('mg-bench'); g.innerHTML=h;
+    TERM=['L','N','E'].map(function(k){return {k:k,x:TPOS[k],y:TY,ring:g.querySelector('[data-r="'+k+'"]')}});
+  }
+  function nearT(x,y,r){var b=null,bd=r;TERM.forEach(function(t){var d=Math.hypot(t.x-x,t.y-y);if(d<=bd){bd=d;b=t}});return b}
+  function checkTouch(force){
+    var e=LS.earth.tip, l=LS.line.tip, touch=Math.hypot(e.x-l.x,e.y-l.y)<16, ne=nearT(e.x,e.y,17), nl=nearT(l.x,l.y,17), R=1000, msg;
+    TERM.forEach(function(t){t.ring.setAttribute('opacity',(t===ne||t===nl)?1:0)});
+    if(touch){R=0;msg='Kedua klip bersentuhan (hubung singkat): jarum 0 M\u03a9.'}
+    else if(nl&&ne){
+      var pr=[nl.k,ne.k].sort().join('');
+      if(pr==='LN'){R=0;msg='LINE \u2192 L, EARTH \u2192 N: kontinuitas elemen atau belitan, jarum 0 M\u03a9. Ini bukan isolasi buruk; ukur isolasi ke E (bodi).'}
+      else{
+        R=SMP[smp].R[cond]*(pr==='EN'?1.18:1);
+        var rt=R>=100?'> 100 M\u03a9':fmt(R)+' M\u03a9', vd=R>=1?'Isolasi layak (\u2265 1 M\u03a9, patokan praktikum).':R>=0.5?'Waspada: isolasi menurun.':'Buruk: isolasi bocor, jangan dioperasikan.';
+        msg='LINE \u2192 '+nl.k+', EARTH \u2192 '+ne.k+': '+rt+'. '+vd;
+      }
+    }else if(nl||ne)msg='Satu klip belum menjepit terminal: rangkaian terbuka, jarum \u221e.';
+    else msg='Dekatkan klip LINE dan EARTH ke terminal L, N, atau E pada sampel.';
+    document.getElementById('mg-info').textContent=msg;
+    var key=R+'|'+smp+cond+(nl?nl.k:'-')+(ne?ne.k:'-')+touch;
+    if(force||key!==lastKey){
+      lastKey=key; touching=touch; setMegohm(R);
+      document.dispatchEvent(new CustomEvent('my10:leads',{detail:{touching:touch,line:nl&&nl.k,earth:ne&&ne.k,megohm:R,sample:smp}}));
+    }
+  }
+  function setSample(n){if(!SMP[n])return; smp=n; drawSample(); document.querySelectorAll('[data-sm]').forEach(function(b){b.classList.toggle('on',b.dataset.sm===n)}); checkTouch(true)}
+  function setCond(c){
+    condHid=(c==='acak'); if(condHid)c=['baik','lembap','bocor'][Math.floor(Math.random()*3)]; cond=c;
+    document.querySelectorAll('[data-cd]').forEach(function(b){b.classList.toggle('on',condHid?b.dataset.cd==='acak':b.dataset.cd===c)}); checkTouch(true);
+  }
+  function setTip(k,x,y){
+    var s=LS[k]; x=cl(x,X0,X1); y=cl(y,Y0,Y1); var sn=nearT(x,y,16); if(sn){x=sn.x;y=sn.y}   // klip menempel di terminal sampel
+    var dx=x-s.A.x, dy=y-s.A.y, d=Math.hypot(dx,dy);
+    if(d>MAXD){x=s.A.x+dx/d*MAXD; y=s.A.y+dy/d*MAXD}
+    else if(d<30){var u=nrm(dx,dy,{x:-1,y:0}); x=s.A.x+u.x*30; y=s.A.y+u.y*30}
+    s.tip.x=cl(x,X0,X1); s.tip.y=cl(y,Y0,Y1); layout(s); checkTouch();
+    document.dispatchEvent(new CustomEvent('lead:move',{detail:{lead:k,tip:{x:s.tip.x,y:s.tip.y}}}));
+  }
+  function setOpen(k,open){
+    var s=LS[k]; s.open=!!open; s.clip.classList.toggle('open',s.open); s.clip.setAttribute('aria-pressed',String(s.open));
+    document.dispatchEvent(new CustomEvent('lead:clip',{detail:{lead:k,open:s.open}}));
+  }
+  function buildLead(k){
+    var c=LC[k], s=LS[k]={A:{x:TX-38,y:c.ty},tip:{x:c.tip[0],y:c.tip[1]},open:false};
+    var g=el('g',{filter:'url(#mg-lsh)'},svg); s.g=g;
+    s.base=el('path',{fill:'none',stroke:c.cable,'stroke-width':6,'stroke-linecap':'round'},g);
+    s.hl=el('path',{fill:'none',stroke:c.hl,'stroke-width':1.6,'stroke-opacity':.55,'stroke-linecap':'round',transform:'translate(-.8 -1.3)'},g);
+    s.hit=el('path',{'class':'hit','aria-hidden':'true'},g);
+    // steker (plug) yang tertancap di terminal
+    var y=c.ty;
+    el('rect',{x:TX-7,y:y-2.6,width:10,height:5.2,rx:1.5,fill:'url(#mg-metal)',stroke:'#6b7076','stroke-width':.6},g);
+    el('path',{d:'M'+(TX-8)+','+(y-5.5)+' H'+(TX-30)+' Q'+(TX-33)+','+(y-5.5)+' '+(TX-33)+','+(y-3)+' V'+(y+3)+' Q'+(TX-33)+','+(y+5.5)+' '+(TX-30)+','+(y+5.5)+' H'+(TX-8)+' Z',fill:c.boot,stroke:c.edge,'stroke-width':1},g);
+    el('rect',{x:TX-38,y:y-3.2,width:6,height:6.4,fill:c.boot,stroke:c.edge,'stroke-width':.8},g);
+    el('path',{d:'M'+(TX-14)+','+(y-5)+' V'+(y+5)+' M'+(TX-19)+','+(y-5)+' V'+(y+5)+' M'+(TX-24)+','+(y-5)+' V'+(y+5),stroke:'#000','stroke-opacity':.25,'stroke-width':1},g);
+    // klip buaya (ujung bebas)
+    var cg=el('g',{'class':'clip',tabindex:0,role:'button','aria-label':'Klip '+c.name+' (seret; klik untuk buka atau tutup)','aria-pressed':'false'},g);
+    cg.innerHTML=clipMarkup(c); s.clip=cg;
+    [cg,s.hit].forEach(function(node){
+      var st=null;
+      node.addEventListener('pointerdown',function(e){
+        g.parentNode.appendChild(g); st={p:ptr(e),x:s.tip.x,y:s.tip.y,m:false};
+        node.classList.add('drag'); node.setPointerCapture(e.pointerId); e.preventDefault();
+      });
+      node.addEventListener('pointermove',function(e){
+        if(!st)return; var q=ptr(e), dx=q.x-st.p.x, dy=q.y-st.p.y;
+        if(Math.hypot(dx,dy)>4)st.m=true; if(st.m)setTip(k,st.x+dx,st.y+dy);
+      });
+      node.addEventListener('pointerup',function(){node.classList.remove('drag'); if(st&&!st.m&&node===cg)setOpen(k,!s.open); st=null});
+      node.addEventListener('pointercancel',function(){node.classList.remove('drag');st=null});
+    });
+    cg.addEventListener('keydown',function(e){
+      var m={ArrowLeft:[-10,0],ArrowRight:[10,0],ArrowUp:[0,-10],ArrowDown:[0,10]}[e.key];
+      if(m){setTip(k,s.tip.x+m[0],s.tip.y+m[1]);e.preventDefault()}
+      else if(e.key==='Enter'||e.key===' '){setOpen(k,!s.open);e.preventDefault()}
+    });
+    layout(s);
+  }
+  function resetLeads(){
+    Object.keys(LC).forEach(function(k){var s=LS[k],c=LC[k]; s.tip.x=c.tip[0]; s.tip.y=c.tip[1]; setOpen(k,false); layout(s)});
+    checkTouch();
+  }
+  Object.keys(LC).forEach(buildLead);
+  document.querySelectorAll('[data-sm]').forEach(function(b){b.addEventListener('click',function(){setSample(b.dataset.sm)})});
+  document.querySelectorAll('[data-cd]').forEach(function(b){b.addEventListener('click',function(){setCond(b.dataset.cd)})});
+  drawSample(); checkTouch(true);
+
+  window.MY10={setMegohm:setMegohm,battCheck:battCheck,read:function(){return {megohm:valOf((ang-A0)/SPAN),batt:batt}},
+    setSample:setSample,setCondition:setCond,leads:{get:function(k){var s=LS[k];return {tip:{x:s.tip.x,y:s.tip.y},open:s.open}},setTip:setTip,setOpen:setOpen,reset:resetLeads}};
+  apply(-44,true);
+})();
+(function(){const home=document.getElementById('home'),mg=document.getElementById('mgv');
+window.openMegger=()=>{home.hidden=true;mg.hidden=false;window.scrollTo(0,0)};
+document.getElementById('mgBack').onclick=()=>{mg.hidden=true;home.hidden=false};
+document.getElementById('mgReset').onclick=()=>{MY10.leads.reset();MY10.setMegohm(1000)}})();
+</script><script>
+(function(){
+var $=function(i){return document.getElementById(i)},NS='http://www.w3.org/2000/svg',svg=$('lx-svg'),
+S={on:1,fc:0,hold:0,mode:0,bl:0,base:0,live:0,mx:0,mn:0,held:0},T=4.2,W=17,H=38,g=.8,
+SEG={'0':'abcdef','1':'bc','2':'abdeg','3':'abcdg','4':'bcfg','5':'acdfg','6':'acdefg','7':'abc','8':'abcdefg','9':'abcdfg','-':'g','O':'abcdef','L':'def',' ':''};
+function hz(a,b,y){return [[a,y+T/2],[a+T/2,y],[b-T/2,y],[b,y+T/2],[b-T/2,y+T],[a+T/2,y+T]]}
+function vt(x,a,b){return [[x+T/2,a],[x+T,a+T/2],[x+T,b-T/2],[x+T/2,b],[x,b-T/2],[x,a+T/2]]}
+var P={a:hz(g,W-g,0),g:hz(T/2+g,W-T/2-g,H/2-T/2),d:hz(g,W-g,H-T),f:vt(0,T/2+g,H/2-g),b:vt(W-T,T/2+g,H/2-g),e:vt(0,H/2+g,H-T/2-g),c:vt(W-T,H/2+g,H-T/2-g)},cells=[],dg=$('lx-dig');
+for(var i=0;i<4;i++){var c=document.createElementNS(NS,'g'),o={};c.setAttribute('transform','translate('+i*21+' 0)');
+ for(var k in P){var p=document.createElementNS(NS,'polygon');p.setAttribute('points',P[k].join(' '));p.setAttribute('class','sg');c.appendChild(p);o[k]=p}
+ var q=document.createElementNS(NS,'circle');q.setAttribute('cx',W+2.1);q.setAttribute('cy',H-1.6);q.setAttribute('r',1.6);q.setAttribute('class','dp');c.appendChild(q);o.dp=q;dg.appendChild(c);cells.push(o)}
+function draw(s,dp){for(var i=0;i<4;i++){var on=SEG[s.charAt(i)]||'';for(var k in P)cells[i][k].setAttribute('class','sg'+(on.indexOf(k)>=0?' on':''));cells[i].dp.setAttribute('class','dp'+(i==dp?' on':''))}}
+function cur(){return S.mode==1?S.mx:S.mode==2?S.mn:S.live}
+function fmt(L){if(L>2e5)return{s:'  OL',dp:-1,k:0};var k=0,v=S.fc?L/10.7639:L,s;
+ if(v>=9999.5){k=1;v/=1000;s=v<100?v.toFixed(2):v.toFixed(1)}else s=(S.fc&&v<999.95)?v.toFixed(1):String(Math.round(v));
+ var d=s.replace('.',''),p=s.indexOf('.'),n=d.length;while(d.length<4)d=' '+d;return{s:d,dp:p<0?-1:p-1+4-n,k:k}}
+function vis(id,x){$(id).setAttribute('visibility',x?'visible':'hidden')}
+function rd(){var on=S.on,f=on?fmt(S.hold?S.held:cur()):{s:'    ',dp:-1,k:0};draw(f.s,f.dp);
+ vis('lx-hold',on&&S.hold);vis('lx-max',on&&S.mode==1);vis('lx-min',on&&S.mode==2);vis('lx-k',on&&f.k);vis('lx-u',on);vis('lx-bt',on);vis('lx-batt',on);
+ $('lx-u').textContent=S.fc?'FC':'Lux';svg.classList.toggle('bl',!!(on&&S.bl));
+ var m=$('lxmini');if(m){var t='';for(var i=0;i<4;i++){t+=f.s.charAt(i);if(i==f.dp)t+='.'}m.textContent=on?t.trim()+(f.k?' k':' ')+$('lx-u').textContent:'alat mati'}}
+function tk(){var b=S.base;S.live=b>0?Math.max(0,b*(1+.004*(Math.random()*2-1))+Math.random()*1.2-.6):0;
+ if(S.mode){S.mx=Math.max(S.mx,S.live);S.mn=Math.min(S.mn,S.live)}rd()}
+function bt(id,fn,lg){var el=$(id),t,l,dn=0;
+ function d(){if(dn)return;dn=1;l=0;el.classList.add('dn');if(lg)t=setTimeout(function(){l=1;lg();rd()},750)}
+ function u(ok){if(!dn)return;dn=0;el.classList.remove('dn');clearTimeout(t);if(ok&&!l){fn();rd()}}
+ el.addEventListener('pointerdown',function(e){e.preventDefault();d()});
+ el.addEventListener('pointerup',function(){u(1)});el.addEventListener('pointerleave',function(){u(0)});el.addEventListener('pointercancel',function(){u(0)});
+ el.addEventListener('keydown',function(e){if(e.key=='Enter'||e.key==' '){e.preventDefault();if(!e.repeat)d()}});
+ el.addEventListener('keyup',function(e){if(e.key=='Enter'||e.key==' ')u(1)});el.addEventListener('blur',function(){u(0)})}
+bt('lx-pw',function(){S.on=!S.on;S.hold=0;S.mode=0;S.bl=0;if(S.on)tk()});
+bt('lx-un',function(){if(S.on)S.fc=!S.fc});
+bt('lx-mm',function(){if(S.on){S.mode=(S.mode+1)%3;if(S.mode==1)S.mx=S.mn=S.live}},function(){S.mode=0});
+bt('lx-hd',function(){if(S.on){S.hold=!S.hold;S.held=cur()}},function(){if(S.on)S.bl=!S.bl});
+window.LUX={setLux:function(x){S.base=Math.max(0,+x||0);tk()},reset:function(){S.on=1;S.fc=S.hold=S.mode=S.bl=0;tk()},S:S};
+setInterval(tk,450);tk();
+})();
+
+(function(){
+var $=function(i){return document.getElementById(i)},XM=[-.45,-.15,.15,.45],SY=204,PX=266,
+G=[['LED',90,[3,5,7,9,12,15,18],'#fff7dc'],['CFL',55,[5,8,14,20],'#eefbff'],['Pijar',12,[15,25,40,60],'#ffcf80']],
+sel=$('lx-sel'),dyn=$('lx-dyn'),sn=$('lx-sens'),sc=$('lx-sc'),D=$('lxd'),Hh=$('lxh'),ss=[],dg=0,tk='';
+for(var j=-6;j<=6;j++){var tx=180+j*26.6;tk+='<path d="M'+tx+' 250v'+(j%5?4:7)+'"/>'}$('lx-tk').innerHTML=tk;
+for(var i=0;i<4;i++){var s=document.createElement('select');s.setAttribute('aria-label','Lampu '+(i+1));var o='<option value="">Mati</option>';
+ G.forEach(function(g,gi){o+='<optgroup label="'+g[0]+'">'+g[2].map(function(w){return '<option value="'+gi+'-'+w+'">'+g[0]+' '+w+' W</option>'}).join('')+'</optgroup>'});
+ s.innerHTML=o;s.onchange=upd;sel.appendChild(s);ss.push(s)}
+function L(i){var v=ss[i].value;if(!v)return null;var p=v.split('-'),g=G[p[0]];return{w:+p[1],e:g[1],c:g[3]}}
+function upd(){var d=+D.value,h=+Hh.value,tot=0,W=0,lm=0,per=[],R='',Gw='',B='',by=SY-d*120,sx=180+h*PX,i,l;
+ for(i=0;i<4;i++){l=L(i);var e=0;if(l){var f=l.w*l.e,dx=h-XM[i];e=f/(4*Math.PI)*d/Math.pow(dx*dx+d*d,1.5);W+=l.w;lm+=f}per.push(e);tot+=e}
+ for(i=0;i<4;i++){l=L(i);var x=180+XM[i]*PX;
+  B+='<line x1="'+x+'" y1="8" x2="'+x+'" y2="'+(by-15)+'" stroke="#6b7780"/><rect x="'+(x-4)+'" y="'+(by-17)+'" width="8" height="7" fill="#6b7780"/>';
+  if(l){var lmn=l.w*l.e;Gw+='<circle cx="'+x+'" cy="'+by+'" r="'+(16+Math.sqrt(lmn)*1.3)+'" fill="url(#lx-gl)" opacity="'+Math.min(.9,.2+lmn/1400)+'"/>';
+   R+='<line x1="'+x+'" y1="'+by+'" x2="'+sx+'" y2="203" stroke="#ffe8a6" stroke-opacity="'+(tot?per[i]/tot*.8:0)+'" stroke-dasharray="3 3"/>';
+   B+='<text x="'+(x+12)+'" y="'+(by+3)+'" font-family="Arial,sans-serif" font-size="9" font-weight="700" fill="#d7e6ea">'+l.w+'W</text>'}
+  B+='<circle cx="'+x+'" cy="'+by+'" r="9" fill="'+(l?l.c:'#39434a')+'" stroke="#8a97a0"/>'}
+ dyn.innerHTML=R+Gw+B;sn.setAttribute('transform','translate('+sx+' 0)');
+ $('lxdo').textContent=d.toFixed(2)+' m';$('lxho').textContent=(h>0?'+':'')+h.toFixed(2)+' m';$('lxtw').textContent=W+' W · '+Math.round(lm)+' lm';
+ $('lxth').innerHTML='Teoritis: <b>'+tot.toFixed(1)+' lux</b> ('+(tot/10.7639).toFixed(1)+' fc). Model: E = Σ (Φ / 4π) · cosθ / r², lampu dianggap sumber titik ke segala arah, sensor menghadap ke atas, tanpa pantulan ruangan. Efikasi: LED 90, CFL 55, pijar 12 lm/W. Alat menambahkan fluktuasi kecil (±0,4%) seperti sensor nyata.';
+ LUX.setLux(tot)}
+function mv(e){var p=sc.createSVGPoint();p.x=e.clientX;p.y=e.clientY;Hh.value=Math.max(-.6,Math.min(.6,(p.matrixTransform(sc.getScreenCTM().inverse()).x-180)/PX)).toFixed(2);upd()}
+sc.onpointerdown=function(e){dg=1;sc.setPointerCapture(e.pointerId);mv(e)};sc.onpointermove=function(e){if(dg)mv(e)};sc.onpointerup=sc.onpointercancel=function(){dg=0};
+sn.onkeydown=function(e){var k=e.key=='ArrowRight'?.02:e.key=='ArrowLeft'?-.02:0;if(k){e.preventDefault();Hh.value=Math.max(-.6,Math.min(.6,+Hh.value+k)).toFixed(2);upd()}};
+D.oninput=Hh.oninput=upd;
+function setv(a){a.forEach(function(v,i){ss[i].value=v});upd()}
+var PR=[['Semua mati',['','','','']],['1× LED 9 W',['0-9','','','']],['4× LED 9 W',['0-9','0-9','0-9','0-9']],['Campuran',['0-5','1-14','2-40','0-12']]];
+PR.forEach(function(p){var b=document.createElement('button');b.className='s';b.textContent=p[0];b.onclick=function(){setv(p[1])};$('lxpre').appendChild(b)});
+function reset(){D.value=.5;Hh.value=0;LUX.reset();setv(['0-9','','',''])}
+$('lxReset').onclick=reset;
+var home=$('home'),v=$('lxv');window.openLux=function(){home.hidden=true;v.hidden=false;window.scrollTo(0,0)};$('lxBack').onclick=function(){v.hidden=true;home.hidden=false};
+reset();
+})();
+</script><script>(function(){var d=document.documentElement,k='lab-view',bs=document.querySelectorAll('[data-vw]'),
+saved=function(){try{var s=localStorage.getItem(k);return s=='hp'||s=='lp'?s:null}catch(e){return null}},
+auto=function(){return innerWidth<=820||(matchMedia('(pointer:coarse)').matches&&innerWidth<=1100)?'hp':'lp'};
+function apply(v){d.dataset.view=v;bs.forEach(function(b){var o=b.dataset.vw==v;b.classList.toggle('on',o);b.setAttribute('aria-pressed',o)});setTimeout(function(){dispatchEvent(new Event('resize'))},30)}
+bs.forEach(function(b){b.onclick=function(){try{localStorage.setItem(k,b.dataset.vw)}catch(e){}apply(b.dataset.vw)}});
+addEventListener('resize',function(){if(!saved()&&d.dataset.view!=auto())apply(auto())});apply(saved()||auto())})();</script></body></html>
